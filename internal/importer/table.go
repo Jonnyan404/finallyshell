@@ -30,20 +30,24 @@ import (
 //     row may be above it.
 //   - Rows without a value are skipped; one without a host, or with a
 //     port that is not 1 to 65535, is a Problem with its row's number.
-//   - A host written host:port, or user@host, gives the port, or the
-//     user, when its own column has none.
+//   - A host written host:port ([IPv6]:port), or user@host, is the host
+//     without them; the port, or the user, is used when its own column
+//     has none. A bare IPv6 address is not split.
 //   - A folder is a path: "Production/Databases", or with "\".
 //   - A key file makes the host log in with that key; else with a
 //     password, which, when the list has it, goes in Entry.Password: the
 //     app keeps it in the system's credential store, never in hosts.json.
+//     Cells are trimmed of spaces, but for the password's, whose spaces
+//     may be part of it.
 //
 // A text file is in whatever encoding Excel saves it: "CSV UTF-8" has a
 // byte order mark, plain "CSV" is the ANSI code page (GBK on Chinese
 // Windows), "Unicode text" is UTF-16 with tabs; DecodeText reads them all.
-// Its delimiter is the header line's: a tab, ";" (Excel's CSV where the
-// decimal separator is a comma, as in much of Europe) when there are more
-// of them than of ",", else ",". A first line "sep=;", which Excel writes
-// and reads, says it instead. Quotes are read leniently (LazyQuotes).
+// Its delimiter is the one, of a tab, ";" (Excel's CSV where the decimal
+// separator is a comma, as in much of Europe) and ",", under which a row
+// of the first ones is a header with a host column, so that a title row
+// above does not count. A first line "sep=;", which Excel writes and
+// reads, says it instead. Quotes are read leniently (LazyQuotes).
 //
 // The rows are kept in the file's order, as the user wrote them, rather
 // than sorted as other sources are.
@@ -234,20 +238,19 @@ type tableRows struct {
 	seen  int // rows not empty before the header, then rows of data
 }
 
-// row reads the row of the file's line: false when no more are read.
+// row reads the row of the file's line: false when no more are read. The
+// cells are as the file has them, spaces and all: add trims those it
+// reads but the password.
 func (t *tableRows) row(line int, cells []string) bool {
-	for i, c := range cells {
-		cells[i] = strings.TrimSpace(c)
-	}
-	if !slices.ContainsFunc(cells, func(c string) bool { return c != "" }) {
+	if emptyRow(cells) {
 		return true
 	}
 	t.seen++
 	if t.cols == nil {
 		if t.first == nil {
-			t.first = slices.DeleteFunc(slices.Clone(cells), func(c string) bool { return c == "" })
+			t.first = trimCells(cells)
 		}
-		t.header(cells)
+		t.cols = headerColumns(cells)
 		if t.cols == nil && t.seen >= headerRows {
 			return false
 		}
@@ -264,8 +267,25 @@ func (t *tableRows) row(line int, cells []string) bool {
 	return true
 }
 
-// header makes cells the header when one of them is a host's.
-func (t *tableRows) header(cells []string) {
+// emptyRow tells whether cells have no value but spaces.
+func emptyRow(cells []string) bool {
+	return !slices.ContainsFunc(cells, func(c string) bool { return strings.TrimSpace(c) != "" })
+}
+
+// trimCells are the values of cells, trimmed, without the empty ones.
+func trimCells(cells []string) []string {
+	var out []string
+	for _, c := range cells {
+		if c = strings.TrimSpace(c); c != "" {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// headerColumns is the index of each column of the header cells: nil
+// when none is a host's, and cells are not a header.
+func headerColumns(cells []string) map[Column]int {
 	cols := map[Column]int{}
 	for i, c := range cells {
 		if col := ColumnOf(c); col != "" {
@@ -274,18 +294,25 @@ func (t *tableRows) header(cells []string) {
 			}
 		}
 	}
-	if _, ok := cols[ColHost]; ok {
-		t.cols = cols
+	if _, ok := cols[ColHost]; !ok {
+		return nil
 	}
+	return cols
 }
 
 // add makes the row of line an entry, or a problem.
 func (t *tableRows) add(line int, cells []string) {
+	// The cells, trimmed: but for the password, whose spaces may be its
+	// own. One of spaces only is none.
 	cell := func(col Column) string {
-		if i, ok := t.cols[col]; ok && i < len(cells) {
+		i, ok := t.cols[col]
+		if !ok || i >= len(cells) || strings.TrimSpace(cells[i]) == "" {
+			return ""
+		}
+		if col == ColPassword {
 			return cells[i]
 		}
-		return ""
+		return strings.TrimSpace(cells[i])
 	}
 	addr, port, user := cell(ColHost), cell(ColPort), cell(ColUser)
 	if u, rest, ok := strings.Cut(addr, "@"); ok {
@@ -294,9 +321,12 @@ func (t *tableRows) add(line int, cells []string) {
 			user = u
 		}
 	}
-	if port == "" {
-		if h, p, err := net.SplitHostPort(addr); err == nil {
-			addr, port = h, p
+	// host:port or [IPv6]:port: the Port cell, when it has one, wins. A
+	// bare IPv6 address, with its many colons, is not split.
+	if h, p, err := net.SplitHostPort(addr); err == nil {
+		addr = h
+		if port == "" {
+			port = p
 		}
 	}
 	addr = strings.TrimSuffix(strings.TrimPrefix(addr, "["), "]") // an IPv6 address written [::1]
@@ -366,12 +396,7 @@ func csvRows(text string, each func(line int, cells []string) bool) error {
 		comma, _ = utf8.DecodeRuneInString(sep)
 		text, skip = rest, 1
 	} else {
-		for l := range strings.Lines(text) {
-			if strings.TrimSpace(l) != "" {
-				comma = sniffComma(l)
-				break
-			}
-		}
+		comma = headerComma(text)
 	}
 	if comma == 0 || comma == '"' || comma == '\r' || comma == '\n' || comma == utf8.RuneError {
 		comma = ','
@@ -396,8 +421,46 @@ func csvRows(text string, each func(line int, cells []string) bool) error {
 	}
 }
 
-// sniffComma is the delimiter of the header line head: a tab, ";" when it
-// has more of them than of ",", else ",".
+// headerComma is the delimiter of the text's header: the one of tab, ";"
+// and "," under which one of its first headerRows rows, not empty, has a
+// host column, with the most columns known when more than one has. With
+// none, as for a file without a host column, it is sniffComma's, of the
+// first line not empty.
+func headerComma(text string) rune {
+	best, most := rune(0), 0
+	for _, comma := range []rune{'\t', ';', ','} {
+		r := csv.NewReader(strings.NewReader(text))
+		r.Comma, r.LazyQuotes, r.FieldsPerRecord, r.ReuseRecord = comma, true, -1, true
+		for rows := 0; rows < headerRows; {
+			cells, err := r.Read()
+			if err != nil {
+				break
+			}
+			if emptyRow(cells) {
+				continue
+			}
+			rows++
+			if cols := headerColumns(cells); cols != nil {
+				if len(cols) > most {
+					best, most = comma, len(cols)
+				}
+				break
+			}
+		}
+	}
+	if best != 0 {
+		return best
+	}
+	for l := range strings.Lines(text) {
+		if strings.TrimSpace(l) != "" {
+			return sniffComma(l)
+		}
+	}
+	return ','
+}
+
+// sniffComma is the delimiter of the line head: a tab, ";" when it has
+// more of them than of ",", else ",".
 func sniffComma(head string) rune {
 	switch {
 	case strings.Contains(head, "\t"):

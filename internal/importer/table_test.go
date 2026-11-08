@@ -229,6 +229,19 @@ func TestReadTableRows(t *testing.T) {
 		{"name,host\n  ,  \nweb\n", nil, []string{"list.csv:3 no-host"}},
 		// A key file: the password is not kept.
 		{"host,password,key\n192.0.2.1,sample-pw,~/.ssh/id_rsa\n", []string{"list.csv:2||192.0.2.1:22|||key ~/.ssh/id_rsa"}, nil},
+		// The delimiter is the header's, under a title row without one.
+		{"Team servers\nHost;User\n192.0.2.1;root\n", []string{"list.csv:3||192.0.2.1:22|root|"}, nil},
+		{"Team servers, November\n\nHost\tUser\n192.0.2.1\troot\n", []string{"list.csv:4||192.0.2.1:22|root|"}, nil},
+		{"Team: a;b\nName,Host,User\nweb,192.0.2.1,root\n", []string{"list.csv:3|web|192.0.2.1:22|root|"}, nil},
+		// A password keeps its spaces, quoted or not; one of spaces only
+		// is none. The other cells are trimmed.
+		{"host,password,user\n 192.0.2.1 ,\"  sample pw \", root \n192.0.2.2,  x  ,root\n192.0.2.3,   ,root\n",
+			[]string{"list.csv:2||192.0.2.1:22|root||pw   sample pw ", "list.csv:3||192.0.2.2:22|root||pw   x  ", "list.csv:4||192.0.2.3:22|root|"}, nil},
+		// host:port is split even with a Port column: its cell wins when
+		// it has a port. A bare IPv6 address is not split.
+		{"host,port\nexample.com:2222,2200\nexample.com:2222,\n[2001:db8::3]:2201,22\n2001:db8::4,2202\n[2001:db8::5],\n",
+			[]string{"list.csv:2||example.com:2200||", "list.csv:3||example.com:2222||", "list.csv:4||2001:db8::3:22||",
+				"list.csv:5||2001:db8::4:2202||", "list.csv:6||2001:db8::5:22||"}, nil},
 		// A quote left open takes the rest of the file, leniently.
 		{"host,notes\n192.0.2.1,\"open\n192.0.2.2,x\n", []string{"list.csv:2||192.0.2.1:22|||open\n192.0.2.2,x"}, nil},
 	} {
@@ -240,8 +253,13 @@ func TestReadTableRows(t *testing.T) {
 		checkTable(t, fmt.Sprintf("%q", c.text), src, c.entries, c.problems)
 	}
 
+	// "sep=" wins over the header's delimiter.
+	_, err := csvSource(t, "sep=,\nHost;User\n192.0.2.1;root\n")
+	if nh := (*NoHostColumnError)(nil); !errors.As(err, &nh) || !slices.Equal(nh.Headers, []string{"Host;User"}) {
+		t.Errorf("sep=: %v", err)
+	}
 	// The header is looked for in the first rows only.
-	_, err := csvSource(t, strings.Repeat("title\n", headerRows)+"host\n192.0.2.1\n")
+	_, err = csvSource(t, strings.Repeat("title\n", headerRows)+"host\n192.0.2.1\n")
 	if nh := (*NoHostColumnError)(nil); !errors.As(err, &nh) || !slices.Equal(nh.Headers, []string{"title"}) {
 		t.Errorf("late header: %v", err)
 	}
@@ -376,6 +394,19 @@ func TestXLSXCells(t *testing.T) {
 		"list.xlsx:4||192.0.2.2:2200||",
 		"list.xlsx:10||192.0.2.3:22||",
 	}, []string{"list.xlsx:9 no-host"})
+}
+
+// A password keeps its spaces in a workbook too, shared or inline; the
+// other cells are trimmed.
+func TestXLSXPasswordSpaces(t *testing.T) {
+	sheet := `<row><c t="inlineStr"><is><t>host</t></is></c><c t="inlineStr"><is><t>password</t></is></c></row>` +
+		`<row><c t="s"><v>0</v></c><c t="s"><v>1</v></c></row>` +
+		`<row><c t="inlineStr"><is><t xml:space="preserve"> 192.0.2.2</t></is></c><c t="inlineStr"><is><t xml:space="preserve">sample pw  </t></is></c></row>`
+	src, err := xlsxSource(t, workbook(t, sheet, `<si><t xml:space="preserve">192.0.2.1 </t></si><si><t xml:space="preserve"> sample pw</t></si>`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkTable(t, "spaces", src, []string{"list.xlsx:2||192.0.2.1:22|||pw  sample pw", "list.xlsx:3||192.0.2.2:22|||pw sample pw  "}, nil)
 }
 
 func TestXLSXLimits(t *testing.T) {

@@ -493,9 +493,13 @@ other columns are ignored:
 - Rows are listed in the file's order. Empty rows are skipped. A row
   without a host, or with a port that is not 1 to 65535, is listed below
   the table with its row number, as failed.
-- A host written `host:port` (`[IPv6]:port` for an IPv6 address) gives
-  the port when the Port cell is empty; `user@host` gives the user when
-  the User cell is empty.
+- A host written `host:port` (`[IPv6]:port` for an IPv6 address) is
+  imported as the host alone; its port is used when the Port cell is
+  empty (a filled Port cell wins). A bare IPv6 address is not split.
+  `user@host` gives the user when the User cell is empty.
+- Spaces around a cell's value are ignored, except in the Password cell:
+  a password is imported exactly as written. A Password cell of only
+  spaces counts as empty.
 - A folder `Production/Databases` (or with `\`) is a nested folder. A
   list without a Folder column imports at the top level.
 - A private key file makes the host log in with that key; its Password
@@ -507,9 +511,13 @@ other columns are ignored:
 Text files: the encoding is the one Excel saved them in: "CSV UTF-8"
 (with a byte order mark), plain "CSV" (the system's code page, GBK on
 Chinese Windows) or "Unicode text" (UTF-16 with tabs). The delimiter is
-the header line's: a tab, `;` (Excel's CSV in many European languages)
-when there are more of them than of `,`, else `,`. A first line `sep=;`
-says it instead. Quotes are read as Excel writes them.
+the one of tab, `;` (Excel's CSV in many European languages) and `,`
+under which one of the first ten rows is a header with a host column, so
+a title row above the header does not decide it (with several, the one
+whose header has the most known columns). A file without a host column
+uses its first line's: a tab, `;` when there are more of them than of
+`,`, else `,`. A first line `sep=;` says it instead. Quotes are read as
+Excel writes them.
 
 Excel files: cells are read as text, numbers without a trailing `.0`, and
 a formula's cell as the value Excel or LibreOffice saved with it. Number
