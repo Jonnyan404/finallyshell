@@ -128,6 +128,55 @@ func TestReadXshell(t *testing.T) {
 	}
 }
 
+// A folder of the user's named Sessions, in the folder of sessions, is one
+// of its folders: the folder found, or chosen, is not read for it.
+func TestReadXshellSessionsFolder(t *testing.T) {
+	session := func(host string) []byte { return []byte("[CONNECTION]\r\nHost=" + host + "\r\n") }
+	write := func(path, host string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, session(host), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	base := t.TempDir()
+	version := filepath.Join(base, "NetSarang Computer", "7")
+	root := filepath.Join(version, "Xshell", "Sessions")
+	write(filepath.Join(root, "web.xsh"), "192.0.2.10")
+	write(filepath.Join(root, "Sessions", "db.xsh"), "192.0.2.20")
+	// A folder of sessions of another name, chosen.
+	custom := filepath.Join(base, "My sessions")
+	write(filepath.Join(custom, "web.xsh"), "192.0.2.10")
+	write(filepath.Join(custom, "Sessions", "db.xsh"), "192.0.2.20")
+
+	saved := XshellCandidates
+	t.Cleanup(func() { XshellCandidates = saved })
+	XshellCandidates = func() []string { return []string{root} }
+	found := FindXshell()
+	if found != root {
+		t.Fatalf("found %q", found)
+	}
+	want := []string{"|web", "Sessions|db"}
+	for _, dir := range []string{found, root, filepath.Dir(root), version, custom} {
+		src, err := ReadXshell(dir)
+		if err != nil {
+			t.Fatalf("%s: %v", dir, err)
+		}
+		wantPath := root
+		if dir == custom {
+			wantPath = custom
+		}
+		if got := listing(src); src.Path != wantPath || !slices.Equal(got, want) {
+			t.Errorf("%s: path %q, entries %q; want %q", dir, src.Path, got, want)
+		}
+		if e := byName(t, src, "db"); e.File != "Sessions/db.xsh" {
+			t.Errorf("%s: db %+v", dir, e)
+		}
+	}
+}
+
 // An export, chosen itself or in a folder chosen, reads without being
 // extracted.
 func TestReadXshellExport(t *testing.T) {

@@ -161,7 +161,7 @@ func FindXshell() string {
 
 // ReadXshell reads the sessions of the folder at path, as Xshell's
 // Sessions folder, the Xshell folder it is in, or the version's folder
-// that one is in: its .xsh files, in folders as its subfolders are, and
+// that one is in (see sessionsDir): its .xsh files, in folders as its subfolders are, and
 // the .xts exports in it. path may be an .xts, or one .xsh, too. Files it
 // does not read are Problems, as are sessions it does not import; Entries
 // are in folder order, then by name. It fails when path cannot be read,
@@ -196,15 +196,32 @@ func ReadXshell(path string) (*Source, error) {
 	return r.src, nil
 }
 
-// sessionsDir is the Sessions folder in dir, or in its Xshell folder:
-// dir itself when it has neither.
+// sessionsDir is the folder of sessions dir is or has: the Sessions
+// folder in it when dir is the Xshell folder (named so), or the one in its
+// Xshell folder when dir is the version's folder; else dir itself. A
+// folder of sessions may have a folder of its own named Sessions, so dir
+// is the folder of sessions when it is named Sessions, as those FindXshell
+// finds are, or has .xsh files of its own.
 func sessionsDir(dir string) string {
-	for _, sub := range []string{"Sessions", filepath.Join("Xshell", "Sessions")} {
-		if p := filepath.Join(dir, sub); isDir(p) {
+	if strings.EqualFold(filepath.Base(dir), "Sessions") || hasSessions(dir) {
+		return dir
+	}
+	if strings.EqualFold(filepath.Base(dir), "Xshell") {
+		if p := filepath.Join(dir, "Sessions"); isDir(p) {
 			return p
 		}
 	}
+	if p := filepath.Join(dir, "Xshell", "Sessions"); isDir(p) {
+		return p
+	}
 	return dir
+}
+
+// hasSessions tells whether dir has .xsh files of its own, not in its
+// folders.
+func hasSessions(dir string) bool {
+	entries, _ := os.ReadDir(dir)
+	return slices.ContainsFunc(entries, func(e fs.DirEntry) bool { return !e.IsDir() && hasExt(e.Name(), xshExt) })
 }
 
 // hasExt tells whether name ends in ext, regardless of case.
