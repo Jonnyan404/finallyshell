@@ -55,7 +55,7 @@ go test -race ./...
 
 `go fmt` 用的是 `go.mod` 里那个工具链的 gofmt；`PATH` 上来自别的 Go 版本的 `gofmt` 对齐注释的方式可能不一样。
 
-跑测试之前，CI 先运行 `go run ./tools/natives`，把 libghostty-vt 下载到用户缓存目录，最多试五次（中间等 2、4、8、16 秒），都失败就报最后一次的错误。GitHub 有时对这个下载返回 504，那样所有打开终端的测试都会失败。CI 在两次运行之间保留缓存目录里的 `mygo/natives` 文件夹（Linux runner 上是 `~/.cache/mygo/natives`），按 `go.sum` 区分，所以大多数运行根本不用下载。
+跑测试之前，CI 先运行 `go run ./tools/natives`，把 libghostty-vt 下载到用户缓存目录。它最多试五分钟，两次之间依次等 2、4、8、16 秒，之后每次等 30 秒，时间到了还不成功就报最后一次的错误。GitHub 有时对这个下载连续几分钟返回 504，那样所有打开终端的测试都会失败。CI 在两次运行之间保留缓存目录里的 `mygo/natives` 文件夹（Linux runner 上是 `~/.cache/mygo/natives`），按 `go.sum` 区分，并且下载成功后马上保存，即使之后测试失败也保留，所以大多数运行根本不用下载。
 
 想看界面测试画出了什么，把 `SHOT_DIR` 设成一个文件夹，测试会把画面存在那里：
 

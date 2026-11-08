@@ -40,10 +40,22 @@ jobs:
         id: natives
         # os.UserCacheDir on Linux: $XDG_CACHE_HOME, else ~/.cache.
         run: echo "dir=${XDG_CACHE_HOME:-$HOME/.cache}/mygo/natives" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v6
+      - name: restore native libraries
+        id: restore
+        uses: actions/cache/restore@v6
         with:
           path: ${{ steps.natives.outputs.dir }}
           key: mygo-natives-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('go.sum') }}
       - name: fetch native libraries
+        id: fetch
         run: go run ./tools/natives
+      # Saved as soon as the download succeeds, so it is kept even when the
+      # tests then fail; never after a failed one, which would keep an
+      # empty folder under the key for good.
+      - name: save native libraries
+        if: always() && steps.fetch.outcome == 'success' && steps.restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ steps.natives.outputs.dir }}
+          key: ${{ steps.restore.outputs.cache-primary-key }}
       - run: go test -race ./...
