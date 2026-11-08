@@ -38,6 +38,12 @@ var importTexts = map[importer.Kind]importText{
 		notFound: locales.FinalShellNotFound,
 		note:     func() string { return locales.ImportPasswordsNote(locales.ImportSourceFinalShell()) },
 	},
+	importer.Xshell: {
+		name:     locales.ImportSourceXshell,
+		choose:   locales.ChooseXshellFolder,
+		notFound: locales.XshellNotFound,
+		note:     func() string { return locales.ImportPasswordsNote(locales.ImportSourceXshell()) },
+	},
 	importer.SecureCRT: {
 		name:     locales.ImportSourceSecureCRT,
 		choose:   locales.ChooseSecureCRTFolder,

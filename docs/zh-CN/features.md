@@ -10,6 +10,7 @@
 - [连接管理器](#连接管理器)
 - [导入连接](#导入连接)
   - [从 FinalShell 导入](#从-finalshell-导入)
+  - [从 Xshell 导入](#从-xshell-导入)
   - [从 SecureCRT 导入](#从-securecrt-导入)
   - [从 MobaXterm 导入](#从-mobaxterm-导入)
   - [从 SSH 配置文件导入](#从-ssh-配置文件导入)
@@ -158,6 +159,24 @@ FinalShell 把连接存在数据目录的 `conn` 文件夹里，Finallyshell 按
 - 代理（`proxy_id` 指向 FinalShell 自己的代理列表）、端口转发、终端编码、退格键设置都不导入（还不知道 FinalShell 存的值是什么格式）。用了代理的连接在“说明”列里注明。
 
 FinalShell 的文件格式没有官方文档，导入按其他开源客户端（Hatoba、LiteShell、MeatShell、OpenFinalShell）的 FinalShell 导入代码整理，写在 `internal/importer/finalshell.go` 的注释里。解析尽量宽松：不认识的字段忽略，缺的字段用默认值（端口 22、密码认证），端口写成字符串也认。
+
+### 从 Xshell 导入
+
+Xshell 把每个会话存成一个文件 `<名称>.xsh`，放在它的 `Sessions` 文件夹里，子文件夹就是它的文件夹。在 Windows 上，Finallyshell 按顺序找这个文件夹：
+
+- `文档\NetSarang Computer\<版本>\Xshell\Sessions`（Xshell 6 及以后），新版本优先，用户目录的“文档”和 OneDrive 的“文档”都找。
+- `文档\NetSarang\Xshell\Sessions`（Xshell 5）。
+- `%APPDATA%\NetSarang\Xshell\Sessions`（更早的版本）。
+
+在 macOS 和 Linux 上，或者 Xshell 的会话存在别处（在它的选项里设置）时，要自己选。可以选 `Sessions` 文件夹、它所在的 `Xshell` 文件夹，或者任何里面有 `.xsh` 文件或 `.xts` 导出文件（Xshell 的“文件”→“导出”）的文件夹：导出文件直接读，不解压，里面的文件夹导入到它所在的文件夹下面。
+
+导入的字段：名称（文件名去掉 `.xsh`）、主机、端口、用户名、备注（会话的“说明”）、文件夹、认证方法。只导入 SSH 会话；Telnet、Rlogin、串口等会话跳过。
+
+- 密码不导入。Xshell 把密码加密存在会话文件里，Finallyshell 不解密，也不读这个字段。
+- 公钥认证的会话导入后是“私钥”认证但没有私钥文件：Xshell 把私钥存在它自己的密钥库里，会话只记着私钥的名字。要编辑连接选私钥文件（需要的话从 Xshell 的“用户密钥”导出成 OpenSSH 格式）。
+- 代理（Xshell 自己代理列表里的名字）、端口转发、终端设置都不导入。用了代理的会话在“说明”列里注明。
+
+Xshell 的会话文件没有官方文档，导入按用户公开的会话文件和其他读这种文件的工具整理，写在 `internal/importer/xshell.go` 的注释里。Xshell 6 及以后写的文件（UTF-16）和旧版本写的文件（ANSI 代码页，中文 Windows 上是 GBK）都能读。解析尽量宽松：不认识的段和字段忽略，没写协议算 SSH，没写端口算 22。
 
 ### 从 SecureCRT 导入
 

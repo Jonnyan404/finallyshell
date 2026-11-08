@@ -13,6 +13,7 @@ supported. [configuration.md](configuration.md) covers the files on disk;
 - [Connection manager](#connection-manager)
 - [Import connections](#import-connections)
   - [From FinalShell](#from-finalshell)
+  - [From Xshell](#from-xshell)
   - [From SecureCRT](#from-securecrt)
   - [From MobaXterm](#from-mobaxterm)
   - [From an SSH config](#from-an-ssh-config)
@@ -285,6 +286,49 @@ LiteShell, MeatShell, OpenFinalShell), summarized in the comments of
 `internal/importer/finalshell.go`. Parsing is lenient: unknown fields are
 ignored, missing ones get defaults (port 22, password authentication), and
 a port written as a string is accepted.
+
+### From Xshell
+
+Xshell keeps each session in a file of its own, `<name>.xsh`, in its
+`Sessions` folder; subfolders are its folders. On Windows, Finallyshell
+looks for that folder in order:
+
+- `Documents\NetSarang Computer\<version>\Xshell\Sessions` (Xshell 6 and
+  later), the newest version first, in the profile's Documents folder and
+  in OneDrive's.
+- `Documents\NetSarang\Xshell\Sessions` (Xshell 5).
+- `%APPDATA%\NetSarang\Xshell\Sessions` (older versions).
+
+On macOS and Linux, and when Xshell keeps its sessions somewhere else (set
+in its options), choose the folder yourself. You can choose the
+`Sessions` folder, the `Xshell` folder it is in, or any folder with
+`.xsh` files or an `.xts` export (File, Export in Xshell) in it: an
+export is read as it is, without extracting it, and its folders are
+imported under the folder it is in.
+
+Fields that are imported: the name (the file's, without `.xsh`), host,
+port, user, notes (the session's Description), folder and authentication
+method. Only SSH sessions are imported; Telnet, Rlogin, serial and other
+sessions are skipped.
+
+- Passwords are not imported. Xshell stores them encrypted in the session
+  file; Finallyshell does not decrypt them and does not read that field.
+- A session that uses a public key is imported with "Private key"
+  authentication but no key file: Xshell keeps its keys in its own key
+  store, and the session only names the key. Edit the connection and
+  choose the key file (exported from Xshell's User Keys in OpenSSH format
+  if needed).
+- Proxies (a name from Xshell's own proxy list), port forwarding and
+  terminal settings are not imported. A session that used a proxy says so
+  in the Note column.
+
+Xshell's session files have no official documentation. The import follows
+session files published by their users and other tools that read them,
+summarized in the comments of `internal/importer/xshell.go`. Files written
+by Xshell 6 and later (UTF-16) and by older versions (the ANSI code page,
+GBK on Chinese Windows) are both read. Parsing is lenient: unknown
+sections and keys are ignored, a missing protocol is SSH, and a missing
+port is 22.
 
 ### From SecureCRT
 

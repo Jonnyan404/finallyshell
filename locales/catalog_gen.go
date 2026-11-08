@@ -4858,6 +4858,36 @@ func (msgs Messages) FinalShellNotFound() string {
 	return Catalog.Format(msgs.locale, "finalShellNotFound", nil)
 }
 
+// ImportSourceXshell says "Xshell"
+// in the language the app shows.
+func ImportSourceXshell() string { return In(i18n.Locale()).ImportSourceXshell() }
+
+// ImportSourceXshell says "Xshell"
+// in the language of msgs.
+func (msgs Messages) ImportSourceXshell() string {
+	return Catalog.Format(msgs.locale, "importSourceXshell", nil)
+}
+
+// ChooseXshellFolder says "Choose Xshell's Sessions folder"
+// in the language the app shows.
+func ChooseXshellFolder() string { return In(i18n.Locale()).ChooseXshellFolder() }
+
+// ChooseXshellFolder says "Choose Xshell's Sessions folder"
+// in the language of msgs.
+func (msgs Messages) ChooseXshellFolder() string {
+	return Catalog.Format(msgs.locale, "chooseXshellFolder", nil)
+}
+
+// XshellNotFound says "Xshell's sessions were not found. Choose the Sessions folder Xshell keeps them in, under Documents\\NetSarang Computer…"
+// in the language the app shows.
+func XshellNotFound() string { return In(i18n.Locale()).XshellNotFound() }
+
+// XshellNotFound says "Xshell's sessions were not found. Choose the Sessions folder Xshell keeps them in, under Documents\\NetSarang Computer…"
+// in the language of msgs.
+func (msgs Messages) XshellNotFound() string {
+	return Catalog.Format(msgs.locale, "xshellNotFound", nil)
+}
+
 // ImportSourceSecureCRT says "SecureCRT"
 // in the language the app shows.
 func ImportSourceSecureCRT() string { return In(i18n.Locale()).ImportSourceSecureCRT() }
