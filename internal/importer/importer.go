@@ -61,6 +61,7 @@ type Kind string
 // readers are the sources, in the order the import window lists them.
 var readers = []*Reader{
 	finalShellReader,
+	mobaXtermReader,
 	sshConfigReader,
 }
 

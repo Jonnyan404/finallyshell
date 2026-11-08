@@ -10,6 +10,7 @@
 - [连接管理器](#连接管理器)
 - [导入连接](#导入连接)
   - [从 FinalShell 导入](#从-finalshell-导入)
+  - [从 MobaXterm 导入](#从-mobaxterm-导入)
   - [从 SSH 配置文件导入](#从-ssh-配置文件导入)
 - [连接编辑器](#连接编辑器)
   - [SSH 连接](#ssh-连接)
@@ -156,6 +157,18 @@ FinalShell 把连接存在数据目录的 `conn` 文件夹里，Finallyshell 按
 - 代理（`proxy_id` 指向 FinalShell 自己的代理列表）、端口转发、终端编码、退格键设置都不导入（还不知道 FinalShell 存的值是什么格式）。用了代理的连接在“说明”列里注明。
 
 FinalShell 的文件格式没有官方文档，导入按其他开源客户端（Hatoba、LiteShell、MeatShell、OpenFinalShell）的 FinalShell 导入代码整理，写在 `internal/importer/finalshell.go` 的注释里。解析尽量宽松：不认识的字段忽略，缺的字段用默认值（端口 22、密码认证），端口写成字符串也认。
+
+### 从 MobaXterm 导入
+
+MobaXterm 把会话存在 `MobaXterm.ini` 里。在 Windows 上，Finallyshell 先找 `%APPDATA%\MobaXterm`（安装版），再找 `Documents\MobaXterm`。便携版把它放在 `MobaXterm.exe` 旁边，要自己选。也可以选从 MobaXterm 导出的会话文件：“Export all sessions to file”或“Export sessions from this folder”导出 `.mxtsessions` 文件，“Save session to file”导出一个会话的 `.moba` 文件。中文 Windows 上保存的文件（GBK 编码）也能读。
+
+只导入 SSH 会话，RDP、VNC、SFTP、Telnet 等其他会话跳过。导入的字段：名称、主机、端口、用户名（MobaXterm 的 `<default>` 是不指定用户名）、注释（作为备注）、文件夹（会话文件夹，和 MobaXterm 里一样嵌套；单独导出的文件夹就是同名的文件夹），以及私钥文件，作为主机的私钥文件（路径里的 `_CurrentDrive_` 就是盘符 `C`）。在 macOS 和 Linux 上，Windows 的私钥路径在本机不存在：主机是“私钥”认证但没有私钥文件，导入后再选。
+
+- 密码不导入。MobaXterm 把密码加密存在会话之外（有主密码保护），Finallyshell 不读。
+- SSH 网关（跳板机）和代理不导入：主机直接连接，“说明”列里会注明。导入后可以在连接编辑器里设置跳板机。
+- 终端设置、颜色和字体、登录后执行的命令、X11 转发、MobaXterm 的 SSH 隧道都不导入。
+
+MobaXterm 的文件格式没有官方文档，导入按 Ruzgfpegk 的 gist “.mxtsessions file format”（对 MobaXterm 26.3 逆向整理的格式说明）和其他开源工具（mobaConverterGo、mobaxterm2ssh、mobaxterm-mcp）的读取代码整理，写在 `internal/importer/mobaxterm.go` 的注释里。还没有用用户的真实文件核对过，所以解析尽量宽松：不认识的段和字段忽略，缺的字段用默认值（端口 22、密码认证），读不了的行算作失败，并标出行号。
 
 ### 从 SSH 配置文件导入
 

@@ -4858,6 +4858,46 @@ func (msgs Messages) FinalShellNotFound() string {
 	return Catalog.Format(msgs.locale, "finalShellNotFound", nil)
 }
 
+// ImportSourceMobaXterm says "MobaXterm"
+// in the language the app shows.
+func ImportSourceMobaXterm() string { return In(i18n.Locale()).ImportSourceMobaXterm() }
+
+// ImportSourceMobaXterm says "MobaXterm"
+// in the language of msgs.
+func (msgs Messages) ImportSourceMobaXterm() string {
+	return Catalog.Format(msgs.locale, "importSourceMobaXterm", nil)
+}
+
+// ChooseMobaXtermFile says "Choose MobaXterm.ini or exported sessions"
+// in the language the app shows.
+func ChooseMobaXtermFile() string { return In(i18n.Locale()).ChooseMobaXtermFile() }
+
+// ChooseMobaXtermFile says "Choose MobaXterm.ini or exported sessions"
+// in the language of msgs.
+func (msgs Messages) ChooseMobaXtermFile() string {
+	return Catalog.Format(msgs.locale, "chooseMobaXtermFile", nil)
+}
+
+// MobaXtermFileTypes says "MobaXterm sessions"
+// in the language the app shows.
+func MobaXtermFileTypes() string { return In(i18n.Locale()).MobaXtermFileTypes() }
+
+// MobaXtermFileTypes says "MobaXterm sessions"
+// in the language of msgs.
+func (msgs Messages) MobaXtermFileTypes() string {
+	return Catalog.Format(msgs.locale, "mobaXtermFileTypes", nil)
+}
+
+// MobaXtermNotFound says "MobaXterm.ini was not found. Choose MobaXterm.ini (in %APPDATA%\\MobaXterm for the installed version, next to MobaXter…"
+// in the language the app shows.
+func MobaXtermNotFound() string { return In(i18n.Locale()).MobaXtermNotFound() }
+
+// MobaXtermNotFound says "MobaXterm.ini was not found. Choose MobaXterm.ini (in %APPDATA%\\MobaXterm for the installed version, next to MobaXter…"
+// in the language of msgs.
+func (msgs Messages) MobaXtermNotFound() string {
+	return Catalog.Format(msgs.locale, "mobaXtermNotFound", nil)
+}
+
 // ImportNoConnections says "No connections found in {path}."
 // in the language the app shows.
 func ImportNoConnections(path string) string { return In(i18n.Locale()).ImportNoConnections(path) }

@@ -700,6 +700,10 @@
   },
   "importLooking": "Looking for connections…",
   "finalShellNotFound": "FinalShell's data folder was not found. Choose the folder FinalShell keeps its data in, the one with a conn folder in it, or a folder exported from FinalShell.",
+  "importSourceMobaXterm": "MobaXterm",
+  "chooseMobaXtermFile": "Choose MobaXterm.ini or exported sessions",
+  "mobaXtermFileTypes": "MobaXterm sessions",
+  "mobaXtermNotFound": "MobaXterm.ini was not found. Choose MobaXterm.ini (in %APPDATA%\\MobaXterm for the installed version, next to MobaXterm.exe for the portable one), or a file of sessions exported from MobaXterm (.mxtsessions or .moba).",
   "importNoConnections": "No connections found in {path}.",
   "@importNoConnections": {
     "placeholders": {

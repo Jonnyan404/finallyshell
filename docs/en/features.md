@@ -13,6 +13,7 @@ supported. [configuration.md](configuration.md) covers the files on disk;
 - [Connection manager](#connection-manager)
 - [Import connections](#import-connections)
   - [From FinalShell](#from-finalshell)
+  - [From MobaXterm](#from-mobaxterm)
   - [From an SSH config](#from-an-ssh-config)
 - [Connection editor](#connection-editor)
   - [SSH connection](#ssh-connection)
@@ -283,6 +284,45 @@ LiteShell, MeatShell, OpenFinalShell), summarized in the comments of
 `internal/importer/finalshell.go`. Parsing is lenient: unknown fields are
 ignored, missing ones get defaults (port 22, password authentication), and
 a port written as a string is accepted.
+
+### From MobaXterm
+
+MobaXterm keeps its sessions in `MobaXterm.ini`. On Windows, Finallyshell
+looks for it in `%APPDATA%\MobaXterm` (the installed version), then in
+`Documents\MobaXterm`. The portable version keeps it next to
+`MobaXterm.exe`: choose it there. You can also choose a file of sessions
+exported from MobaXterm: "Export all sessions to file" or "Export
+sessions from this folder" write a `.mxtsessions` file, and "Save session
+to file" a `.moba` file of one session. Files saved on Chinese Windows
+(GBK) are read too.
+
+Only SSH sessions are imported; RDP, VNC, SFTP, Telnet and the others are
+skipped. Fields that are imported: name, host, port, user (none for
+MobaXterm's `<default>`), the comment as the notes, the folder (the
+session folders, nested as in MobaXterm; a folder exported on its own is
+a folder of its name), and the private key file, as the host's key file
+(`_CurrentDrive_` in the path is the drive letter `C`). On macOS and
+Linux, a key path of Windows is not a file there: the host has "Private key" authentication
+without a key file, to choose after importing.
+
+- Passwords are not imported. MobaXterm stores them encrypted (behind its
+  master password), apart from the sessions; Finallyshell does not read
+  them.
+- SSH gateways (jump hosts) and proxies are not imported: the host
+  connects directly, and the Note column says so. Its jump host can be
+  set in the connection editor afterwards.
+- Terminal settings, colors and fonts, the command run at login, X11
+  forwarding and MobaXterm's SSH tunnels are not imported.
+
+MobaXterm's file format has no official documentation. The import follows
+the description of the format reverse-engineered for MobaXterm 26.3 in
+the gist ".mxtsessions file format" by Ruzgfpegk, and the readers of
+other open source tools (mobaConverterGo, mobaxterm2ssh, mobaxterm-mcp),
+summarized in the comments of `internal/importer/mobaxterm.go`. It has
+not been checked against users' files yet, so parsing is lenient:
+unknown sections and fields are ignored, missing fields get defaults
+(port 22, password authentication), and a line that cannot be read is
+listed as failed with its line number.
 
 ### From an SSH config
 

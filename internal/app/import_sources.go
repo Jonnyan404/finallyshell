@@ -38,6 +38,13 @@ var importTexts = map[importer.Kind]importText{
 		notFound: locales.FinalShellNotFound,
 		note:     func() string { return locales.ImportPasswordsNote(locales.ImportSourceFinalShell()) },
 	},
+	importer.MobaXterm: {
+		name:      locales.ImportSourceMobaXterm,
+		choose:    locales.ChooseMobaXtermFile,
+		fileTypes: locales.MobaXtermFileTypes,
+		notFound:  locales.MobaXtermNotFound,
+		note:      func() string { return locales.ImportPasswordsNote(locales.ImportSourceMobaXterm()) },
+	},
 	importer.SSHConfig: {
 		name:     locales.ImportSourceSSHConfig,
 		choose:   locales.ChooseSSHConfigFile,
