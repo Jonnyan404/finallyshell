@@ -183,6 +183,23 @@ then push main to the `production` branch.
    when its notes are not `go run ./tools/release notes <version>`, and
    otherwise copies the manifest and the files it names with the
    installers.
+
+   `mygo build` downloads each target's native libraries (libghostty-vt)
+   from GitHub into the cache's `mygo/natives` folder
+   (`~/Library/Caches/mygo/natives` on the macOS runner,
+   `~/.cache/mygo/natives` on the Linux ones), and gives up on a timeout.
+   The job keeps that folder between runs, keyed by the runner's OS, the
+   target and `go.sum`, and saves it after a build that succeeded. It runs
+   the build through `.github/scripts/build-with-retries.sh`, which runs
+   it again when it fails on a download (its output ends with
+   `error: downloading …`), for up to ten minutes, waiting 15 and 30
+   seconds, then 60 seconds, between tries, and then fails with the last
+   error; a download
+   done before the failure stays in the cache, so the next try fetches
+   only what is missing. Any other error fails the build at once.
+   `.github/scripts/build-with-retries-test.sh` tests the script against a
+   fake `mygo`. One platform failing doesn't cancel the others
+   (`fail-fast: false`); nothing is published unless all three are built.
 4. Checks that the manifests of all three platforms are there, then tags
    `v<version>` and publishes a GitHub Release with the installers, the
    updates, `SHA256SUMS`, `LICENSE.txt` and `THIRD_PARTY_LICENSES.txt`.

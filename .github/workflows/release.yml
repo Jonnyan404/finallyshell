@@ -51,6 +51,9 @@ jobs:
   build:
     needs: [version, gate]
     strategy:
+      # A platform that fails doesn't cancel the others: the release job
+      # needs all three, so nothing is published unless all are built.
+      fail-fast: false
       matrix:
         include:
           - platform: darwin/arm64
@@ -81,6 +84,28 @@ jobs:
           mkdir -p resources
           cp LICENSE resources/LICENSE.txt
           go run ./tools/release licenses > resources/THIRD_PARTY_LICENSES.txt
+      # mygo build downloads the target's native libraries (libghostty-vt)
+      # from GitHub into <os.UserCacheDir()>/mygo/natives/<sha256>/ and
+      # reuses them from there. Keep that folder between runs, keyed by the
+      # runner's OS, the target and go.sum (the MyGo version decides the
+      # libraries).
+      - name: Natives cache folder
+        id: natives
+        # os.UserCacheDir: ~/Library/Caches on macOS; $XDG_CACHE_HOME, else
+        # ~/.cache, on Linux, where the Windows target is built too.
+        run: |
+          case "$RUNNER_OS" in
+          macOS) dir="$HOME/Library/Caches/mygo/natives" ;;
+          *) dir="${XDG_CACHE_HOME:-$HOME/.cache}/mygo/natives" ;;
+          esac
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+          echo "key=mygo-natives-$RUNNER_OS-${PLATFORM/\//-}-${{ hashFiles('go.sum') }}" >> "$GITHUB_OUTPUT"
+      - name: Restore the native libraries
+        id: restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ steps.natives.outputs.dir }}
+          key: ${{ steps.natives.outputs.key }}
       - name: Build
         # With the secret key, mygo build also signs an update of the app
         # for installed copies: an archive, deltas from the last releases
@@ -96,7 +121,18 @@ jobs:
             echo "::error::The MYGO_UPDATER_PRIVATE_KEY secret is not set: installed apps could not update to this release"
             exit 1
           fi
-          go tool mygo build -platform "$PLATFORM" -o dist
+          # Tried again for up to ten minutes when a download fails, as
+          # GitHub's release downloads time out or answer 5xx at times;
+          # any other error fails at once.
+          .github/scripts/build-with-retries.sh go tool mygo build -platform "$PLATFORM" -o dist
+      # Only after a build, which downloaded them all; a failed one would
+      # keep an incomplete folder under the key for good.
+      - name: Save the native libraries
+        if: steps.restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ steps.natives.outputs.dir }}
+          key: ${{ steps.natives.outputs.key }}
       - name: Collect the files to publish
         run: |
           dir="dist/${PLATFORM/\//-}"
