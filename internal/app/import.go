@@ -2,6 +2,8 @@ package app
 
 import (
 	"errors"
+	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -15,17 +17,21 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// Importing from FinalShell: the manager's toolbar opens a window, modal
-// to the manager as the editor is, that finds FinalShell's data folder
-// (importer.Find), or asks for it, reads it off the UI thread and lists
-// its connections with check boxes to choose those to import. Hosts the
-// store has already, the same address, port and user, are listed but not
-// imported. Importing adds the hosts chosen, in folders named as
-// FinalShell's, shows them in the manager and says there how many were
-// imported, skipped and failed. Passwords are not imported (see the
-// importer package): the first connection asks for them, as for any host.
+// Importing connections: the manager's toolbar opens a window, modal to
+// the manager as the editor is, with a choice of source at the top ("Import
+// from": FinalShell and the others of importer.Readers, with their texts
+// in import_sources.go), the one chosen last in this run. It finds the
+// source's file or folder (its Find), or asks for it, reads it off the UI
+// thread and lists its connections with check boxes to choose those to
+// import. Hosts the store has already, the same address, port and user,
+// are listed but not imported. Importing adds the hosts chosen, in folders
+// named as the source's, shows them in the manager and says there how
+// many were imported, skipped and failed. Passwords of other clients are
+// not imported (see the importer package): the first connection asks for
+// them, as for any host. Those of a list that has them go in the system's
+// credential store, as a remembered password does.
 
-// WindowImport is the window importing from FinalShell.
+// WindowImport is the import window.
 const WindowImport WindowKind = "import"
 
 var importSpec = WindowSpec{
@@ -39,10 +45,11 @@ var importSpec = WindowSpec{
 
 // importState is the import window's, while it is open.
 type importState struct {
-	dir      string // the folder read
-	busy     bool   // looking for FinalShell's folder, or reading it
-	notFound bool   // none was found, nor chosen
-	err      error  // reading it failed
+	source   importSource // the source chosen
+	path     string       // the file or folder read
+	busy     bool         // looking for the source's file or folder, or reading it
+	notFound bool         // none was found, nor chosen
+	err      error        // reading it failed
 	src      *importer.Source
 	rows     []importRow
 	list     ui.ListState
@@ -83,51 +90,81 @@ func (st *importState) statuses(hosts *config.Store) []importStatus {
 	return out
 }
 
-// importFinalShell opens the import window, or brings it to the front,
-// and starts looking for FinalShell's folder.
-func (a *App) importFinalShell() {
+// openImport opens the import window, or brings it to the front, and
+// starts looking for the source chosen last.
+func (a *App) openImport() {
 	if a.windowOpen(WindowImport) {
 		a.plat.FocusWindow(WindowImport)
 		return
 	}
-	st := &importState{row: -1}
+	st := &importState{row: -1, source: a.importSource(a.importKind)}
 	a.imp = st
 	a.openWindow(importSpec, a.importView)
-	a.readFinalShell(st, false)
+	a.readImport(st, false)
 }
 
-// readFinalShell reads FinalShell's folder for st, off the UI thread: the
-// one importer.Find finds, unless choose, and the one the user chooses
+// importSource is the source of kind k, or the first when none is.
+func (a *App) importSource(k importer.Kind) importSource {
+	for _, s := range a.importSources {
+		if s.Kind == k {
+			return s
+		}
+	}
+	return a.importSources[0]
+}
+
+// chooseImportSource makes s the source of st, and of the window the next
+// time it opens, and looks for it, as the window does as it opens.
+func (a *App) chooseImportSource(st *importState, s importSource) {
+	if s.Kind == st.source.Kind {
+		return
+	}
+	a.importKind = s.Kind
+	*st = importState{source: s, row: -1, reads: st.reads}
+	a.readImport(st, false)
+}
+
+// readImport reads the source's file or folder for st, off the UI thread:
+// the one its Find finds, unless choose, and the one the user chooses
 // when there is none. Canceling the choice keeps what st shows.
-func (a *App) readFinalShell(st *importState, choose bool) {
+func (a *App) readImport(st *importState, choose bool) {
 	st.reads++
 	read := st.reads
 	st.busy = true
-	find, title := a.findFinalShell, locales.ChooseFinalShellFolder()
+	src := st.source
+	find, title := src.Find, src.choose()
+	fileTypes := ""
+	if src.fileTypes != nil {
+		fileTypes = src.fileTypes()
+	}
 	go func() {
-		dir := ""
-		if !choose {
-			dir = find()
+		path := ""
+		if !choose && find != nil {
+			path = find()
 		}
 		var err error
-		if dir == "" {
-			dir, err = a.plat.OpenFolder(WindowImport, title)
+		switch {
+		case path != "":
+		case src.Folder:
+			path, err = a.plat.OpenFolder(WindowImport, title)
+		default:
+			path, err = a.plat.OpenFileOfType(WindowImport, title, fileTypes, src.Extensions)
 		}
-		var src *importer.Source
-		if dir != "" && err == nil {
-			src, err = importer.Read(dir)
+		var got *importer.Source
+		if path != "" && err == nil {
+			got, err = src.Read(path)
 		}
 		a.post(func() {
 			if a.imp != st || st.reads != read {
 				return
 			}
 			st.busy = false
-			if dir == "" && err == nil { // canceled
+			if path == "" && err == nil { // canceled
 				st.notFound = st.notFound || st.src == nil && st.err == nil
 				return
 			}
-			st.dir, st.err, st.notFound = dir, err, false
-			st.setSource(src, a.hosts)
+			st.path, st.err, st.notFound = path, err, false
+			st.setSource(got, a.hosts)
 		})
 	}()
 }
@@ -188,10 +225,12 @@ func (a *App) importView(c *ui.Context) {
 		}
 	}
 	ui.Column(c).Fill().Gap(10).Padding(12, 14).Children(func() {
-		a.importFolderRow(c, st)
+		a.importSourceRow(c, st)
 		switch {
 		case st.src != nil:
-			widgets.Muted(c, locales.ImportPasswordsNote()).FontSize(12)
+			if st.source.note != nil {
+				widgets.Muted(c, st.source.note()).FontSize(12)
+			}
 			a.importTable(c, st, statuses)
 			a.importProblems(c, st)
 		default:
@@ -202,15 +241,10 @@ func (a *App) importView(c *ui.Context) {
 					widgets.Muted(c, locales.ImportLooking())
 				case st.err != nil:
 					ui.Text(c, a.importError(st)).TextColor(theme.Danger).TextAlign(ui.Center).MaxWidth(520)
-					if st.dir == "" { // the folder row has none
-						if ui.PrimaryButton(c, locales.ChooseFolder()).Clicked() {
-							a.readFinalShell(st, true)
-						}
-					}
 				case st.notFound:
-					ui.Text(c, locales.FinalShellNotFound()).TextAlign(ui.Center).MaxWidth(520)
-					if ui.PrimaryButton(c, locales.ChooseFolder()).Clicked() {
-						a.readFinalShell(st, true)
+					ui.Text(c, st.source.notFound()).TextAlign(ui.Center).MaxWidth(520)
+					if ui.PrimaryButton(c, st.chooseLabel()).Clicked() {
+						a.readImport(st, true)
 					}
 				}
 			})
@@ -236,34 +270,73 @@ func (a *App) importView(c *ui.Context) {
 	})
 }
 
-// importFolderRow is the folder read, and the button choosing another:
-// nothing before a folder was found or chosen.
-func (a *App) importFolderRow(c *ui.Context, st *importState) {
-	dir := st.dir
-	if st.src != nil {
-		dir = st.src.Conn
-	}
-	if dir == "" {
-		return
-	}
+// importSourceRow is the choice of source, the file or folder read, once
+// one was found or chosen, and the button choosing another.
+func (a *App) importSourceRow(c *ui.Context, st *importState) {
 	ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-		ui.Icon(c, icons.Get("folder")).FontSize(15).TextColor(folderColor)
-		ui.Text(c, locales.FinalShellFolderAt(dir)).SingleLine().MinWidth(0).Grow(1).Tooltip(dir)
+		ui.Text(c, locales.ImportFrom()).SingleLine().Shrink(0)
+		names := make([]string, len(a.importSources))
+		for i, s := range a.importSources {
+			names[i] = s.name()
+		}
+		chosen := st.source.name()
+		if ui.Select(c, &chosen, names).Label(locales.ImportFrom()).Width(200).Changed() {
+			if i := slices.Index(names, chosen); i >= 0 {
+				a.chooseImportSource(st, a.importSources[i])
+			}
+		}
+		path := st.path
+		if st.src != nil {
+			path = st.src.Path
+		}
+		if path == "" { // the button is in the middle of the window
+			return
+		}
+		ui.Row(c).Gap(6).AlignItems(ui.Center).Grow(1).MinWidth(0).Padding(0, 0, 0, 4).Children(func() {
+			if st.source.Folder {
+				ui.Icon(c, icons.Get("folder")).FontSize(15).TextColor(folderColor)
+			} else {
+				ui.Icon(c, icons.Get("file-text")).FontSize(15).TextColor(theme.TextMuted)
+			}
+			ui.Text(c, tildePath(path, a.home(), runtime.GOOS)).SingleLine().MinWidth(0).Grow(1).Tooltip(path)
+		})
 		if st.busy && st.src != nil {
 			ui.Spinner(c)
 		}
-		if ui.Button(c, locales.ChooseFolder()).Disabled(st.busy).Clicked() {
-			a.readFinalShell(st, true)
+		if ui.Button(c, st.chooseLabel()).Disabled(st.busy).Clicked() {
+			a.readImport(st, true)
 		}
 	})
 }
 
-// importError says why reading the folder failed.
+// tildePath is path with the home folder home written "~", as shells
+// write it, on goos where they do: path itself on Windows, or out of
+// home.
+func tildePath(path, home, goos string) string {
+	if goos == "windows" || home == "" || home == "/" {
+		return path
+	}
+	if rest, ok := strings.CutPrefix(path, strings.TrimSuffix(home, "/")+"/"); ok {
+		return "~/" + rest
+	}
+	return path
+}
+
+// chooseLabel is the label of the button choosing the source's file or
+// folder.
+func (st *importState) chooseLabel() string {
+	if st.source.Folder {
+		return locales.ChooseFolder()
+	}
+	return locales.ChooseFile()
+}
+
+// importError says why reading the file or folder failed.
 func (a *App) importError(st *importState) string {
 	if errors.Is(st.err, importer.ErrNoConnections) {
-		return locales.FinalShellNoConnections(st.dir)
+		return locales.ImportNoConnections(st.path)
 	}
-	return locales.FinalShellReadFailed(st.err.Error())
+	return locales.ImportReadFailed(st.err.Error())
 }
 
 // checkAll chooses every row that is not skipped, or none.
@@ -319,8 +392,8 @@ func (a *App) importTable(c *ui.Context, st *importState, statuses []importStatu
 			if r.e.NeedsKey {
 				notes = append(notes, locales.ImportNeedsKey())
 			}
-			if r.e.Proxy {
-				notes = append(notes, locales.ImportNoProxy())
+			if r.e.Note != "" {
+				notes = append(notes, importNoteText(r.e.Note))
 			}
 			text(strings.Join(notes, locales.ListSeparator())).Tooltip(strings.Join(notes, "\n"))
 		}
@@ -337,7 +410,7 @@ func (a *App) importTable(c *ui.Context, st *importState, statuses []importStatu
 	}
 }
 
-// importProblems lists the files not imported from, and why.
+// importProblems lists the files, or lines, not imported from, and why.
 func (a *App) importProblems(c *ui.Context, st *importState) {
 	failed, skipped := st.problemCounts()
 	if failed+skipped == 0 {
@@ -351,30 +424,11 @@ func (a *App) importProblems(c *ui.Context, st *importState) {
 		ui.Scroll(c).MaxHeight(78).Children(func() {
 			ui.Column(c).Gap(2).Padding(0, 0, 0, 19).Children(func() {
 				for _, p := range st.src.Problems {
-					widgets.Muted(c, locales.ProblemLine(p.File, importProblemText(p))).FontSize(12).SingleLine().MinWidth(0).Tooltip(p.Detail)
+					widgets.Muted(c, locales.ProblemLine(p.File, importProblemText(p, st.source.name()))).FontSize(12).SingleLine().MinWidth(0).Tooltip(p.Detail)
 				}
 			})
 		})
 	})
-}
-
-// importProblemText says why a file was not imported from.
-func importProblemText(p importer.Problem) string {
-	switch p.Reason {
-	case importer.Broken:
-		return locales.ProblemBroken()
-	case importer.Unreadable:
-		return locales.ProblemUnreadable()
-	case importer.TooLarge:
-		return locales.ProblemTooLarge()
-	case importer.NoHost:
-		return locales.ProblemNoHost()
-	case importer.NotSSH:
-		return locales.ProblemNotSSH()
-	case importer.DeletedThere:
-		return locales.ProblemDeleted()
-	}
-	return ""
 }
 
 // importChosen imports the rows chosen, closes the window and shows the
@@ -393,8 +447,12 @@ func (a *App) importChosen(st *importState, statuses []importStatus) {
 	keys := 0
 	m := &a.manager
 	for _, h := range added {
-		if h.Auth == config.AuthKey {
+		if h.Auth == config.AuthKey && h.KeyPath == "" {
 			keys++
+		}
+		// A list's password, as the editor keeps a remembered one.
+		if e := entryOf(entries, h); e != nil && e.Password != "" && h.Auth == config.AuthPassword {
+			a.keepLogin(h, e.Password, true, false)
 		}
 		for _, f := range a.hosts.FolderPath(h.Folder) {
 			m.tree.Open.Add(managerItem{folder: f.ID})
@@ -417,4 +475,15 @@ func (a *App) importChosen(st *importState, statuses []importStatus) {
 	a.imp = nil
 	a.closeWindow(WindowImport)
 	a.saveFromManager()
+}
+
+// entryOf is the entry of entries that Import added as h: the first to
+// reach the same target, as Import skips the others.
+func entryOf(entries []*importer.Entry, h *config.Host) *importer.Entry {
+	for _, e := range entries {
+		if importer.SameTarget(e.Host, h) {
+			return e
+		}
+	}
+	return nil
 }

@@ -1,5 +1,3 @@
-// Package importer reads the connections of other SSH clients, for the
-// connection manager to import: FinalShell's for now.
 package importer
 
 import (
@@ -14,7 +12,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"finallyshell/internal/config"
 )
@@ -68,10 +65,15 @@ import (
 // which agree on the layout and the keys above; Scoop's FinalShell
 // manifest, which persists the install folder's conn.
 
+// FinalShell is the source of FinalShell's connections.
+const FinalShell Kind = "finalshell"
+
+var finalShellReader = &Reader{Kind: FinalShell, Folder: true, Find: FindFinalShell, Read: ReadFinalShell}
+
 // ConnDir is the name of FinalShell's folder of connections.
 const ConnDir = "conn"
 
-// Limits on what Read reads, should the user choose a folder that is not
+// Limits on what ReadFinalShell reads, should the user choose a folder that is not
 // FinalShell's, as their home.
 const (
 	maxFiles    = 10000
@@ -79,9 +81,10 @@ const (
 	maxDepth    = 16
 )
 
-// Candidates are the folders FinalShell keeps its data in on this system,
-// the likeliest first. Find tries them; tests replace it.
-var Candidates = func() []string { return candidates(runtime.GOOS, os.Getenv) }
+// FinalShellCandidates are the folders FinalShell keeps its data in on
+// this system, the likeliest first. FindFinalShell tries them; tests
+// replace it.
+var FinalShellCandidates = func() []string { return candidates(runtime.GOOS, os.Getenv) }
 
 // candidates are FinalShell's data folders on goos, with env for the
 // environment's variables.
@@ -126,10 +129,11 @@ func candidates(goos string, env func(string) string) []string {
 	return out
 }
 
-// Find is the first of Candidates that has a conn folder: "" when none
-// has. It reads the disk, so the app calls it off the UI thread.
-func Find() string {
-	for _, dir := range Candidates() {
+// FindFinalShell is the first of FinalShellCandidates that has a conn
+// folder: "" when none has. It reads the disk, so the app calls it off
+// the UI thread.
+func FindFinalShell() string {
+	for _, dir := range FinalShellCandidates() {
 		if isDir(filepath.Join(dir, ConnDir)) {
 			return dir
 		}
@@ -142,76 +146,12 @@ func isDir(path string) bool {
 	return err == nil && st.IsDir()
 }
 
-// Entry is a connection read from FinalShell.
-type Entry struct {
-	// File is the connection's file, relative to Source.Conn.
-	File string
-	// Host is the connection as a host to add: with no ID and no folder.
-	Host *config.Host
-	// Folder is the path of the folder it was in, the top-level folder
-	// first: nil for the top level.
-	Folder []string
-	// NeedsKey is set for a host that logs in with a key, kept in
-	// FinalShell's key store: the user chooses the key's file after
-	// importing.
-	NeedsKey bool
-	// Proxy is set for a connection through one of FinalShell's proxies,
-	// which are not imported: the host connects directly.
-	Proxy bool
-}
-
-// FolderLabel is e's folder path, as "Production / Databases".
-func (e *Entry) FolderLabel() string { return strings.Join(e.Folder, " / ") }
-
-// Reason is why a file was not read, or a connection not imported.
-type Reason int
-
-const (
-	// Broken is a file that is not JSON, or not an object.
-	Broken Reason = iota + 1
-	// Unreadable is a file the system did not let Read open.
-	Unreadable
-	// TooLarge is a file over a megabyte, which no connection is.
-	TooLarge
-	// NoHost is a connection without an address.
-	NoHost
-	// NotSSH is a connection of another kind: RDP, VNC and such.
-	NotSSH
-	// DeletedThere is a connection deleted in FinalShell.
-	DeletedThere
-)
-
-// Failed tells whether a file with the reason r failed to import, rather
-// than was skipped on purpose.
-func (r Reason) Failed() bool { return r != NotSSH && r != DeletedThere }
-
-// Problem is a file Read did not take a connection from.
-type Problem struct {
-	File   string // relative to Source.Conn
-	Reason Reason
-	// Detail is what went wrong in a Broken or Unreadable file, in
-	// English, from the system or the JSON parser.
-	Detail string
-}
-
-// Source is what Read found in FinalShell's folder.
-type Source struct {
-	// Conn is the conn folder read.
-	Conn     string
-	Entries  []*Entry
-	Problems []Problem
-}
-
-// ErrNoConnections is Read's error for a folder without a connection's
-// file, as one that is not FinalShell's.
-var ErrNoConnections = errors.New("no FinalShell connections in the folder")
-
-// Read reads the connections of FinalShell's data folder dir, or of its
-// conn folder, or of a folder FinalShell exported. Files that do not parse
-// are Problems, as are connections it does not import; Entries are in
-// folder order, then by name. It fails when dir cannot be read, or has no
-// connection's file at all.
-func Read(dir string) (*Source, error) {
+// ReadFinalShell reads the connections of FinalShell's data folder dir,
+// or of its conn folder, or of a folder FinalShell exported. Files that do
+// not parse are Problems, as are connections it does not import; Entries
+// are in folder order, then by name. It fails when dir cannot be read, or
+// has no connection's file at all.
+func ReadFinalShell(dir string) (*Source, error) {
 	conn := dir
 	if sub := filepath.Join(dir, ConnDir); isDir(sub) {
 		conn = sub
@@ -219,7 +159,7 @@ func Read(dir string) (*Source, error) {
 	if _, err := os.ReadDir(conn); err != nil {
 		return nil, err
 	}
-	r := &reader{src: &Source{Conn: conn}, folders: map[string]*fsFolder{}, dirFolder: map[string]string{}}
+	r := &fsReader{src: &Source{Kind: FinalShell, Path: conn}, folders: map[string]*fsFolder{}, dirFolder: map[string]string{}}
 	r.walk(conn, "", 0)
 	if r.connFiles == 0 {
 		return nil, fmt.Errorf("%s: %w", conn, ErrNoConnections)
@@ -227,26 +167,9 @@ func Read(dir string) (*Source, error) {
 	for _, c := range r.conns {
 		r.add(c)
 	}
-	slices.SortStableFunc(r.src.Entries, func(a, b *Entry) int {
-		if n := slices.CompareFunc(a.Folder, b.Folder, compareFold); n != 0 {
-			return n
-		}
-		return compareFold(a.Host.Title(), b.Host.Title())
-	})
-	// Those that failed first.
-	slices.SortStableFunc(r.src.Problems, func(a, b Problem) int {
-		if a.Reason.Failed() != b.Reason.Failed() {
-			if a.Reason.Failed() {
-				return -1
-			}
-			return 1
-		}
-		return strings.Compare(a.File, b.File)
-	})
+	sortSource(r.src)
 	return r.src, nil
 }
-
-func compareFold(a, b string) int { return strings.Compare(strings.ToLower(a), strings.ToLower(b)) }
 
 // fsFolder is a folder of FinalShell's: from a folder.json, or a
 // directory of an export.
@@ -285,7 +208,7 @@ type fsFolderJSON struct {
 	DeleteTime json.RawMessage `json:"delete_time"`
 }
 
-type reader struct {
+type fsReader struct {
 	src     *Source
 	folders map[string]*fsFolder // by id
 	// dirFolder is the folder of each directory, by its path relative to
@@ -298,7 +221,7 @@ type reader struct {
 
 // walk reads the directory rel of the conn folder, at depth, whose
 // enclosing directory's folder is the one of filepath.Dir(rel).
-func (r *reader) walk(abs, rel string, depth int) {
+func (r *fsReader) walk(abs, rel string, depth int) {
 	entries, err := os.ReadDir(abs)
 	if err != nil {
 		if rel != "" {
@@ -375,7 +298,7 @@ func topOr(parent, outer string) string {
 // readFile reads the file at path, rel to the conn folder, noting a
 // problem when it cannot: ok is false then, and for a file that is not
 // there.
-func (r *reader) readFile(path, rel string) ([]byte, bool) {
+func (r *fsReader) readFile(path, rel string) ([]byte, bool) {
 	if r.files >= maxFiles {
 		return nil, false
 	}
@@ -396,7 +319,7 @@ func (r *reader) readFile(path, rel string) ([]byte, bool) {
 	return data, true
 }
 
-func (r *reader) problem(rel string, reason Reason, err error) {
+func (r *fsReader) problem(rel string, reason Reason, err error) {
 	p := Problem{File: filepath.ToSlash(rel), Reason: reason}
 	if err != nil {
 		p.Detail = err.Error()
@@ -405,7 +328,7 @@ func (r *reader) problem(rel string, reason Reason, err error) {
 }
 
 // parseConn reads a connection's file: one object, or a list of them.
-func (r *reader) parseConn(data []byte, rel string) {
+func (r *fsReader) parseConn(data []byte, rel string) {
 	data = bytes.TrimPrefix(data, []byte("\xef\xbb\xbf")) // a BOM
 	var list []json.RawMessage
 	if t := bytes.TrimSpace(data); len(t) > 0 && t[0] == '[' {
@@ -442,7 +365,7 @@ func decodeObject(data []byte, v any) error {
 
 // add makes the connection c an entry, or a problem, once every folder is
 // known.
-func (r *reader) add(c *fsConn) {
+func (r *fsReader) add(c *fsConn) {
 	bad := func(reason Reason) { r.src.Problems = append(r.src.Problems, Problem{File: c.file, Reason: reason}) }
 	if number(c.DeleteTime) != 0 {
 		bad(DeletedThere)
@@ -474,19 +397,22 @@ func (r *reader) add(c *fsConn) {
 	if on, ok := boolean(c.ExecChannel); ok && !on {
 		h.NoMonitor = true
 	}
-	r.src.Entries = append(r.src.Entries, &Entry{
+	e := &Entry{
 		File:     c.file,
 		Host:     h,
 		Folder:   r.folderPath(topOr(text(c.ParentID), c.dir), c.dir),
 		NeedsKey: h.Auth == config.AuthKey,
-		Proxy:    text(c.ProxyID) != "",
-	})
+	}
+	if text(c.ProxyID) != "" {
+		e.Note = ProxyNotImported
+	}
+	r.src.Entries = append(r.src.Entries, e)
 }
 
 // folderPath is the names of the folder id and those it is in, the
 // top-level one first, without deleted folders. An id no folder has is
 // the folder of the directory, dir.
-func (r *reader) folderPath(id, dir string) []string {
+func (r *fsReader) folderPath(id, dir string) []string {
 	if id != "" && r.folders[id] == nil {
 		id = dir
 	}
@@ -551,65 +477,4 @@ func boolean(raw json.RawMessage) (value, ok bool) {
 		return b, true
 	}
 	return false, false
-}
-
-// SameTarget tells whether a and b reach the same account: the same
-// address, regardless of case, port and user.
-func SameTarget(a, b *config.Host) bool {
-	return strings.EqualFold(strings.TrimSpace(a.Addr), strings.TrimSpace(b.Addr)) &&
-		a.PortOr22() == b.PortOr22() && a.User == b.User
-}
-
-// Present is the host of s, not deleted, that h is the same target as:
-// nil for none.
-func Present(s *config.Store, h *config.Host) *config.Host {
-	for _, x := range s.Live() {
-		if SameTarget(x, h) {
-			return x
-		}
-	}
-	return nil
-}
-
-// Import adds the entries' hosts to s, each a copy with an ID, in the
-// folder of its folder path: s's folder of that name in each folder from
-// the top, or a new one. Hosts present already, as Present has them, or
-// earlier in entries, are skipped. Each host added is created at at, the
-// time of the import. It returns the hosts added.
-func Import(s *config.Store, entries []*Entry, at time.Time) []*config.Host {
-	var added []*config.Host
-	for _, e := range entries {
-		if Present(s, e.Host) != nil {
-			continue
-		}
-		h := e.Host.Clone()
-		h.ID = config.NewHostID()
-		for s.Host(h.ID) != nil {
-			h.ID += "-"
-		}
-		h.Folder = folderFor(s, e.Folder)
-		h.CreatedAt = at
-		s.Add(h)
-		added = append(added, h)
-	}
-	return added
-}
-
-// folderFor is the ID of the folder at path in s, made as needed: "" for
-// the top level.
-func folderFor(s *config.Store, path []string) string {
-	parent := ""
-	for _, name := range path {
-		i := slices.IndexFunc(s.Subfolders(parent), func(f *config.Folder) bool { return f.Name == name })
-		if i >= 0 {
-			parent = s.Subfolders(parent)[i].ID
-			continue
-		}
-		f := s.AddFolder(name, parent)
-		for s.Folder(f.ID) != f {
-			f.ID += "-"
-		}
-		parent = f.ID
-	}
-	return parent
 }

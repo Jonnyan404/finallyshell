@@ -4660,16 +4660,6 @@ func (msgs Messages) ListSeparator() string {
 	return Catalog.Format(msgs.locale, "listSeparator", nil)
 }
 
-// ImportFinalShell says "Import from FinalShell"
-// in the language the app shows.
-func ImportFinalShell() string { return In(i18n.Locale()).ImportFinalShell() }
-
-// ImportFinalShell says "Import from FinalShell"
-// in the language of msgs.
-func (msgs Messages) ImportFinalShell() string {
-	return Catalog.Format(msgs.locale, "importFinalShell", nil)
-}
-
 // Import says "Import"
 // in the language the app shows.
 func Import() string { return In(i18n.Locale()).Import() }
@@ -4680,14 +4670,34 @@ func (msgs Messages) Import() string {
 	return Catalog.Format(msgs.locale, "import", nil)
 }
 
-// ImportTitle says "Import from FinalShell"
+// ImportTitle says "Import connections"
 // in the language the app shows.
 func ImportTitle() string { return In(i18n.Locale()).ImportTitle() }
 
-// ImportTitle says "Import from FinalShell"
+// ImportTitle says "Import connections"
 // in the language of msgs.
 func (msgs Messages) ImportTitle() string {
 	return Catalog.Format(msgs.locale, "importTitle", nil)
+}
+
+// ImportFrom says "Import from"
+// in the language the app shows.
+func ImportFrom() string { return In(i18n.Locale()).ImportFrom() }
+
+// ImportFrom says "Import from"
+// in the language of msgs.
+func (msgs Messages) ImportFrom() string {
+	return Catalog.Format(msgs.locale, "importFrom", nil)
+}
+
+// ImportSourceFinalShell says "FinalShell"
+// in the language the app shows.
+func ImportSourceFinalShell() string { return In(i18n.Locale()).ImportSourceFinalShell() }
+
+// ImportSourceFinalShell says "FinalShell"
+// in the language of msgs.
+func (msgs Messages) ImportSourceFinalShell() string {
+	return Catalog.Format(msgs.locale, "importSourceFinalShell", nil)
 }
 
 // ChooseFinalShellFolder says "Choose FinalShell's data folder"
@@ -4710,14 +4720,14 @@ func (msgs Messages) ChooseFolder() string {
 	return Catalog.Format(msgs.locale, "chooseFolder", nil)
 }
 
-// FinalShellFolderAt says "FinalShell folder: {dir}"
+// ChooseFile says "Choose file…"
 // in the language the app shows.
-func FinalShellFolderAt(dir string) string { return In(i18n.Locale()).FinalShellFolderAt(dir) }
+func ChooseFile() string { return In(i18n.Locale()).ChooseFile() }
 
-// FinalShellFolderAt says "FinalShell folder: {dir}"
+// ChooseFile says "Choose file…"
 // in the language of msgs.
-func (msgs Messages) FinalShellFolderAt(dir string) string {
-	return Catalog.Format(msgs.locale, "finalShellFolderAt", map[string]any{"dir": dir})
+func (msgs Messages) ChooseFile() string {
+	return Catalog.Format(msgs.locale, "chooseFile", nil)
 }
 
 // ProblemLine says "{file}: {reason}"
@@ -4736,11 +4746,11 @@ func (msgs Messages) ProblemLine(file string, reason string) string {
 	return Catalog.Format(msgs.locale, "problemLine", map[string]any{"file": file, "reason": reason})
 }
 
-// ImportLooking says "Looking for FinalShell's connections…"
+// ImportLooking says "Looking for connections…"
 // in the language the app shows.
 func ImportLooking() string { return In(i18n.Locale()).ImportLooking() }
 
-// ImportLooking says "Looking for FinalShell's connections…"
+// ImportLooking says "Looking for connections…"
 // in the language of msgs.
 func (msgs Messages) ImportLooking() string {
 	return Catalog.Format(msgs.locale, "importLooking", nil)
@@ -4756,36 +4766,34 @@ func (msgs Messages) FinalShellNotFound() string {
 	return Catalog.Format(msgs.locale, "finalShellNotFound", nil)
 }
 
-// FinalShellNoConnections says "No FinalShell connections in {dir}."
+// ImportNoConnections says "No connections found in {path}."
 // in the language the app shows.
-func FinalShellNoConnections(dir string) string {
-	return In(i18n.Locale()).FinalShellNoConnections(dir)
+func ImportNoConnections(path string) string { return In(i18n.Locale()).ImportNoConnections(path) }
+
+// ImportNoConnections says "No connections found in {path}."
+// in the language of msgs.
+func (msgs Messages) ImportNoConnections(path string) string {
+	return Catalog.Format(msgs.locale, "importNoConnections", map[string]any{"path": path})
 }
 
-// FinalShellNoConnections says "No FinalShell connections in {dir}."
+// ImportReadFailed says "Could not read it: {error}"
+// in the language the app shows.
+func ImportReadFailed(error string) string { return In(i18n.Locale()).ImportReadFailed(error) }
+
+// ImportReadFailed says "Could not read it: {error}"
 // in the language of msgs.
-func (msgs Messages) FinalShellNoConnections(dir string) string {
-	return Catalog.Format(msgs.locale, "finalShellNoConnections", map[string]any{"dir": dir})
+func (msgs Messages) ImportReadFailed(error string) string {
+	return Catalog.Format(msgs.locale, "importReadFailed", map[string]any{"error": error})
 }
 
-// FinalShellReadFailed says "Could not read the folder: {error}"
+// ImportPasswordsNote says "Passwords are not imported, as {source} encrypts them: each is asked for at the first connection."
 // in the language the app shows.
-func FinalShellReadFailed(error string) string { return In(i18n.Locale()).FinalShellReadFailed(error) }
+func ImportPasswordsNote(source string) string { return In(i18n.Locale()).ImportPasswordsNote(source) }
 
-// FinalShellReadFailed says "Could not read the folder: {error}"
+// ImportPasswordsNote says "Passwords are not imported, as {source} encrypts them: each is asked for at the first connection."
 // in the language of msgs.
-func (msgs Messages) FinalShellReadFailed(error string) string {
-	return Catalog.Format(msgs.locale, "finalShellReadFailed", map[string]any{"error": error})
-}
-
-// ImportPasswordsNote says "Passwords are not imported, as FinalShell encrypts them: each is asked for at the first connection."
-// in the language the app shows.
-func ImportPasswordsNote() string { return In(i18n.Locale()).ImportPasswordsNote() }
-
-// ImportPasswordsNote says "Passwords are not imported, as FinalShell encrypts them: each is asked for at the first connection."
-// in the language of msgs.
-func (msgs Messages) ImportPasswordsNote() string {
-	return Catalog.Format(msgs.locale, "importPasswordsNote", nil)
+func (msgs Messages) ImportPasswordsNote(source string) string {
+	return Catalog.Format(msgs.locale, "importPasswordsNote", map[string]any{"source": source})
 }
 
 // ImportColFolder says "Folder"
@@ -4898,13 +4906,13 @@ func (msgs Messages) ImportNothing() string {
 	return Catalog.Format(msgs.locale, "importNothing", nil)
 }
 
-// ImportProblems says "Files not imported: {failed} failed, {skipped} skipped"
+// ImportProblems says "Not imported: {failed} failed, {skipped} skipped"
 // in the language the app shows.
 func ImportProblems(failed int, skipped int) string {
 	return In(i18n.Locale()).ImportProblems(failed, skipped)
 }
 
-// ImportProblems says "Files not imported: {failed} failed, {skipped} skipped"
+// ImportProblems says "Not imported: {failed} failed, {skipped} skipped"
 // in the language of msgs.
 func (msgs Messages) ImportProblems(failed int, skipped int) string {
 	return Catalog.Format(msgs.locale, "importProblems", map[string]any{"failed": failed, "skipped": skipped})
@@ -4960,14 +4968,14 @@ func (msgs Messages) ProblemNotSSH() string {
 	return Catalog.Format(msgs.locale, "problemNotSSH", nil)
 }
 
-// ProblemDeleted says "deleted in FinalShell, skipped"
+// ProblemDeleted says "deleted in {source}, skipped"
 // in the language the app shows.
-func ProblemDeleted() string { return In(i18n.Locale()).ProblemDeleted() }
+func ProblemDeleted(source string) string { return In(i18n.Locale()).ProblemDeleted(source) }
 
-// ProblemDeleted says "deleted in FinalShell, skipped"
+// ProblemDeleted says "deleted in {source}, skipped"
 // in the language of msgs.
-func (msgs Messages) ProblemDeleted() string {
-	return Catalog.Format(msgs.locale, "problemDeleted", nil)
+func (msgs Messages) ProblemDeleted(source string) string {
+	return Catalog.Format(msgs.locale, "problemDeleted", map[string]any{"source": source})
 }
 
 // ImportResult says "Imported {imported, plural, one {# connection} other {# connections}}, skipped {skipped}, failed {failed}."

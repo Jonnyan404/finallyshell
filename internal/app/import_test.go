@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -11,17 +12,59 @@ import (
 	"time"
 
 	"finallyshell/internal/config"
+	"finallyshell/internal/importer"
 	"finallyshell/locales"
 
 	"github.com/egoist/mygo/ui"
 )
 
-// fakeFolderPicker stands in for the dialog that picks a folder to read,
-// as fakeFilePicker does for files.
+// fakeFolderPicker stands in for the dialogs that pick a folder, or a
+// file of a type, to import from, as fakeFilePicker does for key files.
 type fakeFolderPicker struct {
 	folderMu    sync.Mutex
 	folder      string
 	folderAsked []filePick
+	file        string
+	fileAsked   []typedPick
+}
+
+// typedPick is what a file of a type was asked for with.
+type typedPick struct {
+	filePick
+	typeName   string
+	extensions []string
+}
+
+func (p *fakeFolderPicker) OpenFileOfType(parent WindowKind, title, typeName string, extensions []string) (string, error) {
+	p.folderMu.Lock()
+	defer p.folderMu.Unlock()
+	p.fileAsked = append(p.fileAsked, typedPick{filePick{parent: parent, title: title}, typeName, extensions})
+	return p.file, nil
+}
+
+// pickTyped is what the next dialogs for a file of a type return: "" for
+// canceled.
+func (p *fakeFolderPicker) pickTyped(path string) {
+	p.folderMu.Lock()
+	p.file = path
+	p.folderMu.Unlock()
+}
+
+func (p *fakeFolderPicker) typedPicks() []typedPick {
+	p.folderMu.Lock()
+	defer p.folderMu.Unlock()
+	return slices.Clone(p.fileAsked)
+}
+
+// findFinalShell makes find what looks for FinalShell's folder.
+func findFinalShell(a *App, find func() string) {
+	for i, s := range a.importSources {
+		if s.Kind == importer.FinalShell {
+			r := *s.Reader
+			r.Find = find
+			a.importSources[i].Reader = &r
+		}
+	}
 }
 
 func (p *fakeFolderPicker) OpenFolder(parent WindowKind, title string) (string, error) {
@@ -61,7 +104,7 @@ func openImport(t *testing.T, a *App, p *fakePlatform) (manager, imp *ui.Tester)
 	a.openManager()
 	manager = p.show(t, WindowManager)
 	manager.Frame()
-	clickTool(t, manager, locales.ImportFinalShell())
+	clickTool(t, manager, locales.ImportTitle())
 	if !a.windowOpen(WindowImport) || a.imp == nil {
 		t.Fatal("the import window is not open")
 	}
@@ -91,18 +134,53 @@ func clickTool(t *testing.T, tt *ui.Tester, label string) {
 // toolbar's overflow menu.
 func TestImportFromOverflowMenu(t *testing.T) {
 	a, p := testApp(t)
-	a.findFinalShell = func() string { return finalShellSample(t, "finalshell") }
+	findFinalShell(a, func() string { return finalShellSample(t, "finalshell") })
 	a.openManager()
 	manager := p.show(t, WindowManager)
 	manager.SetSize(420, 500)
 	manager.Frame()
-	if err := manager.Click(locales.ImportFinalShell()); err == nil {
+	if err := manager.Click(locales.ImportTitle()); err == nil {
 		t.Fatal("the import tool fits a narrow manager; the test needs it in the overflow menu")
 	}
-	clickTool(t, manager, locales.ImportFinalShell())
+	clickTool(t, manager, locales.ImportTitle())
 	if !a.windowOpen(WindowImport) || a.imp == nil {
 		t.Fatal("the import window is not open")
 	}
+}
+
+func TestTildePath(t *testing.T) {
+	for _, c := range []struct{ path, home, goos, want string }{
+		{"/home/ann/.finalshell/conn", "/home/ann", "linux", "~/.finalshell/conn"},
+		{"/home/ann/.finalshell/conn", "/home/ann/", "linux", "~/.finalshell/conn"},
+		{"/Users/ann/Library/FinalShell/conn", "/Users/ann", "darwin", "~/Library/FinalShell/conn"},
+		{"/home/annie/x", "/home/ann", "linux", "/home/annie/x"},
+		{"/home/ann", "/home/ann", "linux", "/home/ann"},
+		{"/etc/ssh/ssh_config", "/", "linux", "/etc/ssh/ssh_config"},
+		{"/x", "", "linux", "/x"},
+		{`C:\Users\ann\AppData\Local\finalshell\conn`, `C:\Users\ann`, "windows", `C:\Users\ann\AppData\Local\finalshell\conn`},
+	} {
+		if got := tildePath(c.path, c.home, c.goos); got != c.want {
+			t.Errorf("%q in %q on %s: %q", c.path, c.home, c.goos, got)
+		}
+	}
+}
+
+// sourcesShot saves a frame of the window with its list of sources open,
+// with SHOT_DIR set, and closes the list.
+func sourcesShot(t *testing.T, tt *ui.Tester, name string) {
+	t.Helper()
+	if os.Getenv("SHOT_DIR") == "" {
+		return
+	}
+	sel, ok := tt.AccessByRole(ui.RolePopUpButton, locales.ImportFrom())
+	if !ok {
+		t.Fatalf("no select; texts %q", tt.Texts())
+	}
+	tt.ClickAt(sel.Bounds.X+sel.Bounds.W/2, sel.Bounds.Y+sel.Bounds.H/2)
+	tt.Frame()
+	saveShot(t, tt, name)
+	tt.Key(0, ui.KeyEscape)
+	tt.Frame()
 }
 
 // importBox is the check box of the row of the host named name.
@@ -121,8 +199,14 @@ func TestImportFinalShell(t *testing.T) {
 	managerHosts(a)
 	// pg-main is here already, by its address, port and user.
 	a.hosts.Add(&config.Host{ID: "mine", Name: "my pg", Addr: "db.example.com", Port: 5022, User: "postgres", Auth: config.AuthPassword})
-	sample := finalShellSample(t, "finalshell")
-	a.findFinalShell = func() string { return sample }
+	// FinalShell's folder in a home folder, which the window writes "~".
+	home := t.TempDir()
+	sample := filepath.Join(home, ".finalshell")
+	if err := os.CopyFS(sample, os.DirFS(finalShellSample(t, "finalshell"))); err != nil {
+		t.Fatal(err)
+	}
+	a.home = func() string { return home }
+	findFinalShell(a, func() string { return sample })
 	manager, tt := openImport(t, a, p)
 	spec := p.windows[WindowImport].spec
 	if spec.Parent != WindowManager || !spec.Modal || spec.Title() != locales.ImportTitle() {
@@ -133,8 +217,8 @@ func TestImportFinalShell(t *testing.T) {
 	}
 
 	for _, s := range []string{"web-1", "bastion", "pg-main", "树莓派", "192.0.2.10", "bastion.example.com:2222", "db.example.com:5022",
-		"deploy", "Production / Databases", "实验室 / Pi", locales.FinalShellFolderAt(filepath.Join(sample, "conn")),
-		locales.ImportPresent("my pg"), locales.ImportSameAs("web-1"), locales.ImportPasswordsNote(),
+		"deploy", "Production / Databases", "实验室 / Pi", tildePath(filepath.Join(sample, "conn"), home, runtime.GOOS), locales.ImportFrom(), locales.ChooseFolder(),
+		locales.ImportPresent("my pg"), locales.ImportSameAs("web-1"), locales.ImportPasswordsNote("FinalShell"),
 		locales.ImportChosen(4, 6), locales.ImportCount(4), locales.ImportProblems(3, 2),
 		locales.ProblemLine("1005_connect_config.json", locales.ProblemBroken()), locales.ProblemLine("1008_connect_config.json", locales.ProblemNoHost())} {
 		if !tt.HasText(s) {
@@ -151,14 +235,16 @@ func TestImportFinalShell(t *testing.T) {
 		}
 	}
 	saveShot(t, tt, "import-en.png")
+	sourcesShot(t, tt, "import-sources-en.png")
 	p.SetLocale("zh-Hans")
 	tt.Frame()
-	for _, s := range []string{"从 FinalShell 导入", "全选", "全不选", "导入 4 个", "已选 4 / 6 个", "文件夹", "说明", "已存在：“my pg”", "导入后需要选择私钥文件", "选择文件夹…"} {
+	for _, s := range []string{"导入连接", "导入来源", "全选", "全不选", "导入 4 个", "已选 4 / 6 个", "文件夹", "说明", "已存在：“my pg”", "导入后需要选择私钥文件", "代理没有导入", "选择文件夹…", "密码不导入（FinalShell 对密码做了加密），第一次连接时会询问密码。"} {
 		if !tt.HasText(s) && spec.Title() != s {
 			t.Errorf("missing %q; texts %q", s, tt.Texts())
 		}
 	}
 	saveShot(t, tt, "import-zh.png")
+	sourcesShot(t, tt, "import-sources-zh.png")
 	p.SetLocale("")
 	tt.Frame()
 
@@ -259,7 +345,7 @@ func TestImportFinalShell(t *testing.T) {
 // the choice is canceled; another folder can be chosen at any time.
 func TestImportChooseFolder(t *testing.T) {
 	a, p := testApp(t)
-	a.findFinalShell = func() string { return "" }
+	findFinalShell(a, func() string { return "" })
 	_, tt := openImport(t, a, p)
 	picks := p.folderPicks()
 	if len(picks) != 1 || picks[0].parent != WindowImport || picks[0].title != locales.ChooseFinalShellFolder() {
@@ -281,7 +367,7 @@ func TestImportChooseFolder(t *testing.T) {
 	}
 	p.until(t, "the folder read", func() bool { return !a.imp.busy })
 	tt.Frame()
-	if !tt.HasText(locales.FinalShellNoConnections(empty)) {
+	if !tt.HasText(locales.ImportNoConnections(empty)) {
 		t.Errorf("texts %q", tt.Texts())
 	}
 
@@ -303,7 +389,7 @@ func TestImportChooseFolder(t *testing.T) {
 	}
 	p.until(t, "the dialog", func() bool { return !a.imp.busy })
 	tt.Frame()
-	if a.imp.src == nil || a.imp.dir != export || !tt.HasText("stage-web") {
+	if a.imp.src == nil || a.imp.path != export || !tt.HasText("stage-web") {
 		t.Errorf("after canceling: %+v", a.imp)
 	}
 	if err := tt.Click(locales.ImportCount(2)); err != nil {
@@ -327,7 +413,7 @@ func TestImportedHostAsksPassword(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "conn", "1_connect_config.json"), []byte(conn), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	a.findFinalShell = func() string { return dir }
+	findFinalShell(a, func() string { return dir })
 	_, tt := openImport(t, a, p)
 	if err := tt.Click(locales.ImportCount(1)); err != nil {
 		t.Fatalf("%v; texts %q", err, tt.Texts())
@@ -355,4 +441,140 @@ func TestImportedHostAsksPassword(t *testing.T) {
 	}
 	key := hostSecretKey(h.ID, secretPassword)
 	p.until(t, "the password stored", func() bool { return p.secrets()[key] == "secret" })
+}
+
+// Every source of importer has its texts, and so is listed.
+func TestImportSourcesListed(t *testing.T) {
+	sources := allImportSources()
+	if len(sources) != len(importer.Readers()) {
+		t.Fatalf("listed %d of %d sources: each needs its texts in importTexts", len(sources), len(importer.Readers()))
+	}
+	for _, s := range sources {
+		if s.name == nil || s.choose == nil || s.notFound == nil || s.name() == "" ||
+			!s.Folder && len(s.Extensions) > 0 && s.fileTypes == nil {
+			t.Errorf("%s: texts %+v", s.Kind, s.importText)
+		}
+	}
+	if sources[0].Kind != importer.FinalShell {
+		t.Errorf("first %s", sources[0].Kind)
+	}
+}
+
+// listSource is a made-up source of a file, as a list of servers, which
+// addListSource adds to a's sources.
+const listSource importer.Kind = "test-list"
+
+func addListSource(a *App) {
+	read := func(path string) (*importer.Source, error) {
+		return &importer.Source{Kind: listSource, Path: path, Entries: []*importer.Entry{
+			{File: "servers.csv:2", Host: &config.Host{Name: "app-1", Addr: "192.0.2.50", User: "ops", Auth: config.AuthPassword}, Password: "sample-not-a-real-secret"},
+			{File: "servers.csv:3", Host: &config.Host{Name: "app-2", Addr: "192.0.2.51", User: "ops", Auth: config.AuthPassword}, KeyFile: "~/.ssh/id_ed25519", Note: "test-note"},
+		}, Problems: []importer.Problem{importer.NewProblem("servers.csv", 4, importer.NoHost, nil)}}, nil
+	}
+	a.importSources = append(a.importSources, importSource{
+		Reader: &importer.Reader{Kind: listSource, Extensions: []string{"csv", "txt"}, Read: read},
+		importText: importText{
+			name:      func() string { return "Server list" },
+			choose:    func() string { return "Choose a server list" },
+			fileTypes: func() string { return "Server lists" },
+			notFound:  func() string { return "Choose a list of servers." },
+		},
+	})
+}
+
+// The window opens on FinalShell, then on the source chosen last.
+// Choosing a source of a file without a place of its own asks for the
+// file; choosing FinalShell again finds it again.
+func TestImportSources(t *testing.T) {
+	a, p := testApp(t)
+	saved := savedHosts(a)
+	sample := finalShellSample(t, "finalshell")
+	findFinalShell(a, func() string { return sample })
+	addListSource(a)
+	_, tt := openImport(t, a, p)
+	if a.imp.source.Kind != importer.FinalShell || !tt.HasText("web-1") {
+		t.Fatalf("opened on %s; texts %q", a.imp.source.Kind, tt.Texts())
+	}
+	if sel, ok := tt.AccessByRole(ui.RolePopUpButton, locales.ImportFrom()); !ok || sel.Value != "FinalShell" {
+		t.Errorf("select %+v", sel)
+	}
+
+	// The list: its chooser opens at once; canceled, the window says what
+	// to choose.
+	choose(t, tt, locales.ImportFrom(), "Server list")
+	p.until(t, "the chooser", func() bool { return !a.imp.busy })
+	tt.Frame()
+	picks := p.typedPicks()
+	if len(picks) != 1 || picks[0].parent != WindowImport || picks[0].title != "Choose a server list" ||
+		picks[0].typeName != "Server lists" || !slices.Equal(picks[0].extensions, []string{"csv", "txt"}) {
+		t.Fatalf("picks %+v", picks)
+	}
+	if !tt.HasText("Choose a list of servers.") || tt.HasText("web-1") || tt.HasText(locales.ChooseFolder()) ||
+		tt.HasText(locales.ImportPasswordsNote("FinalShell")) || a.importKind != listSource {
+		t.Errorf("texts %q", tt.Texts())
+	}
+	saveShot(t, tt, "import-source-en.png")
+
+	list := filepath.Join(t.TempDir(), "servers.csv")
+	p.pickTyped(list)
+	if err := tt.Click(locales.ChooseFile()); err != nil {
+		t.Fatal(err)
+	}
+	p.until(t, "the list read", func() bool { return !a.imp.busy && a.imp.src != nil })
+	tt.Frame()
+	for _, s := range []string{"app-1", "app-2", list, "test-note", locales.ImportCount(2), locales.ImportProblems(1, 0),
+		locales.ProblemLine("servers.csv:4", locales.ProblemNoHost())} {
+		if !tt.HasText(s) {
+			t.Errorf("missing %q; texts %q", s, tt.Texts())
+		}
+	}
+	saveShot(t, tt, "import-list-en.png")
+
+	// FinalShell again, found again; then the list again, chosen again.
+	choose(t, tt, locales.ImportFrom(), locales.ImportSourceFinalShell())
+	p.until(t, "FinalShell read", func() bool { return !a.imp.busy && a.imp.src != nil })
+	tt.Frame()
+	if a.imp.src.Kind != importer.FinalShell || !tt.HasText("web-1") || tt.HasText("app-1") || !tt.HasText(locales.ImportPasswordsNote("FinalShell")) {
+		t.Fatalf("texts %q", tt.Texts())
+	}
+	if len(p.folderPicks()) != 0 || len(p.typedPicks()) != 2 {
+		t.Errorf("picks %v %v", p.folderPicks(), p.typedPicks())
+	}
+	choose(t, tt, locales.ImportFrom(), "Server list")
+	p.until(t, "the list read", func() bool { return !a.imp.busy && a.imp.src != nil })
+	tt.Frame()
+
+	// Importing keeps the list's password in the credential store, not in
+	// hosts.json, and makes its key file the host's key.
+	if err := tt.Click(locales.ImportCount(2)); err != nil {
+		t.Fatalf("%v; texts %q", err, tt.Texts())
+	}
+	hosts := a.hosts.Live()
+	if len(hosts) != 2 || hosts[0].Name != "app-1" || hosts[1].Auth != config.AuthKey || hosts[1].KeyPath != "~/.ssh/id_ed25519" {
+		t.Fatalf("hosts %+v", hosts)
+	}
+	key := hostSecretKey(hosts[0].ID, secretPassword)
+	p.until(t, "the password stored", func() bool { return p.secrets()[key] == "sample-not-a-real-secret" })
+	if a.passwords[hosts[0].ID] != "sample-not-a-real-secret" || !hosts[0].RemembersPassword() {
+		t.Errorf("password %q", a.passwords[hosts[0].ID])
+	}
+	if _, ok := p.secrets()[hostSecretKey(hosts[1].ID, secretPassword)]; ok {
+		t.Error("a password stored for the key host")
+	}
+	if strings.Contains(string(*saved), "sample-not-a-real-secret") {
+		t.Errorf("saved %s", *saved)
+	}
+	// No key file to choose: the list's host has its own.
+	manager := p.show(t, WindowManager)
+	manager.Frame()
+	if want := locales.ImportResult(2, 0, 1); !manager.HasText(want) || manager.HasText(locales.ImportKeysNote(1)) {
+		t.Errorf("no %q; texts %q", want, manager.Texts())
+	}
+
+	// The window opens on the list the next time.
+	_, tt = openImport(t, a, p)
+	if a.imp.source.Kind != listSource || !tt.HasText(locales.ImportPresent("app-1")) {
+		t.Errorf("opened on %s; texts %q", a.imp.source.Kind, tt.Texts())
+	}
+	a.closeWindow(WindowImport)
 }

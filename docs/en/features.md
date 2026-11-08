@@ -11,7 +11,8 @@ supported. [configuration.md](configuration.md) covers the files on disk;
 - [Sessions and tabs](#sessions-and-tabs)
 - [New tab and quick connect](#new-tab-and-quick-connect)
 - [Connection manager](#connection-manager)
-- [Import from FinalShell](#import-from-finalshell)
+- [Import connections](#import-connections)
+  - [From FinalShell](#from-finalshell)
 - [Connection editor](#connection-editor)
   - [SSH connection](#ssh-connection)
   - [Terminal](#terminal-page)
@@ -84,8 +85,8 @@ host that is not deleted (name, host, user):
   at the top.
 - Then the other hosts, the last one added at the top. The time a host was
   added (`createdAt`) is recorded when it is created, duplicated or
-  imported from FinalShell. Older hosts without that time come last, in
-  their saved order.
+  imported. Older hosts without that time come last, in their saved
+  order.
 
 When both parts are present they are headed "Recent" and "Other
 connections". A host that was just added therefore appears here right
@@ -124,7 +125,7 @@ Toolbar:
 - New folder: created in the selected folder, or, when a connection is
   selected, in the folder that connection is in.
 - Collapse all, Expand all.
-- Import: import from FinalShell (see below).
+- Import: import connections from another client (see below).
 - Show deleted.
 - A folder filter: "All", or only one folder.
 - A search box.
@@ -183,11 +184,69 @@ of the connection manager (see
 [Child windows](development.md#child-windows)). After it saves, the
 connection manager shows and selects the connection right away.
 
-## Import from FinalShell
+## Import connections
 
-Import, in the connection manager's toolbar, opens a modal window of the
-connection manager. It looks for FinalShell's data folder (the one with a
-`conn` folder in it), trying in order:
+Import, in the connection manager's toolbar, opens the "Import connections"
+window, a modal window of the connection manager. "Import from" at its top
+chooses where the connections come from. Only FinalShell is in the list
+for now; other clients and lists of servers come later. The window opens
+on the source chosen last since Finallyshell started (FinalShell the first
+time).
+
+Choosing a source looks for its file or folder in the places that source
+keeps it (the files are read in a goroutine and shown through `App.post`
+when done). If none is found, or the source has no place of its own, a
+file or folder chooser opens (showing hidden files and folders). Canceling
+it says what to choose, with a button to choose it. Once a file or folder
+is read, its path is shown at the top (the home folder as `~`, except on
+Windows), next to "Choose file…" or "Choose folder…", which reads
+another at any time.
+
+The window lists every SSH connection read (Name, Host, User, Folder,
+Note), each with a checkbox. All are checked by default. "Select all" and
+"Select none" change them all, and Enter, double-click or Space toggles
+the selected row.
+
+- A connection with the same host address (ignoring case), port and user
+  as an existing host is shown in grey as "Already present as ...". It
+  cannot be checked and is not imported. Of two identical connections in
+  the source, only the first is imported.
+- Files, or lines of a file, that cannot be read (not in the source's
+  format, too large, a read error, no host address) count as failed.
+  Connections of other kinds (RDP, VNC and such) and connections deleted
+  in the other client count as skipped. Both are listed below the table,
+  each with its file, or its file and line (`file:line`).
+- The Note column says what is not imported of a connection, such as a
+  proxy, or that its key file must be chosen after importing.
+
+"Import N" puts the connections into folders that follow the source's
+folder structure. Folders are matched by name level by level from the top:
+an existing one is reused, a missing one is created, and only folders that
+receive imported connections are created. A source without folders
+imports at the top level. The window then closes, the connection manager
+expands those folders and selects the first imported connection, and the
+bottom of the connection manager shows how many were imported, skipped and
+failed, and how many need a key file chosen.
+
+For every source:
+
+- The time added (`createdAt`) is the time of the import, so imported
+  connections come first under "Other connections" in quick connect.
+- Passwords that other clients store are not imported: they encrypt them
+  with keys of their own, and Finallyshell does not decrypt them. Each
+  password is asked for at the first connection (remembered by default,
+  in the system keychain). A list of servers that has passwords in it
+  puts each in the system keychain, as "Remember password" does, never in
+  `hosts.json`.
+- A private key file the source names becomes the host's key file. A key
+  the other client keeps in a store of its own is not imported: the host
+  has "Private key" authentication without a key file, and the Note
+  column and the result say to choose it.
+
+### From FinalShell
+
+FinalShell keeps its connections in the `conn` folder of its data folder,
+which Finallyshell looks for in order:
 
 - Windows: `%LOCALAPPDATA%\finalshell`, `%APPDATA%\finalshell`,
   `%ProgramFiles%\FinalShell`, `%ProgramFiles(x86)%\FinalShell`,
@@ -196,46 +255,16 @@ connection manager. It looks for FinalShell's data folder (the one with a
 - macOS: `~/Library/FinalShell`, `~/Library/Application Support/finalshell`.
 - Linux: `~/.finalshell`, `~/.local/share/finalshell`.
 
-If none is found, a folder chooser opens (showing hidden folders). You can
-choose the data folder, its `conn` folder, or a folder exported from
-FinalShell. "Choose folder…" at the top of the window picks another folder
-at any time. The files are read in a goroutine and shown through
-`App.post` when done.
-
-The window lists every SSH connection (Name, Host, User, Folder, Note),
-each with a checkbox. All are checked by default. "Select all" and "Select
-none" change them all, and Enter, double-click or Space toggles the
-selected row.
-
-- A connection with the same host address (ignoring case), port and user
-  as an existing host is shown in grey as "Already present as ...". It
-  cannot be checked and is not imported. Of two identical connections in
-  FinalShell, only the first is imported.
-- Files that cannot be read (not JSON, too large, a read error, no host
-  address) count as failed. RDP, VNC and other non-SSH connections, and
-  connections deleted in FinalShell, count as skipped. Both are listed
-  below the table.
-
-"Import N" puts the connections into folders that follow FinalShell's
-folder structure. Folders are matched by name level by level from the top:
-an existing one is reused, a missing one is created, and only folders that
-receive imported connections are created. The window then closes, the
-connection manager expands those folders and selects the first imported
-connection, and the bottom of the connection manager shows how many were
-imported, skipped and failed.
+You can choose the data folder, its `conn` folder, or a folder exported
+from FinalShell.
 
 Fields that are imported: name, host, port, user, notes (`description`),
 folder, authentication method, and whether the exec channel is enabled (a
 connection with it turned off is imported with the server monitor turned
-off).
+off). The time added is not FinalShell's `create_time`.
 
-- The time added (`createdAt`) is the time of the import, not FinalShell's
-  `create_time`, so imported connections come first under "Other
-  connections" in quick connect.
 - Passwords are not imported. FinalShell stores them encrypted in its
   files; Finallyshell does not decrypt them and does not read that field.
-  Each password is asked for at the first connection (remembered by
-  default, in the system keychain).
 - A connection that uses a private key is imported with "Private key"
   authentication but no key file. FinalShell stores private keys in its
   own `config.json` and the connection only records the key's ID; that

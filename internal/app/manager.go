@@ -344,8 +344,8 @@ func (a *App) managerToolbar(c *ui.Context) {
 				}
 			}
 			// Short, as the toolbar has little room at the manager's size.
-			if toolText("import", locales.ImportFinalShell(), locales.Import()).Clicked() {
-				a.importFinalShell()
+			if toolText("import", locales.ImportTitle(), locales.Import()).Clicked() {
+				a.openImport()
 			}
 		}).Label(locales.ManagerTitle()).Grow(1).MinWidth(0)
 		ui.Checkbox(c, &m.showDeleted, locales.ShowDeleted())

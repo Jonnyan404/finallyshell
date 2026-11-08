@@ -12,6 +12,7 @@
 - [代码结构](#代码结构)
 - [子窗口](#子窗口)
 - [选项窗口加一页](#选项窗口加一页)
+- [加一个导入来源](#加一个导入来源)
 - [关闭和退出](#关闭和退出)
 - [单实例](#单实例)
 - [加一条文案](#加一条文案)
@@ -105,7 +106,7 @@ tools/release/       发布用的工具：算下一个版本号、生成 release
 tools/screenshots/   从 internal/app 的测试重新生成 docs/screenshots/ 里的 README 截图
 internal/
   config/            主机和文件夹（hosts.json）、设置的读写，背景图片的副本，配置目录；proxy.go 是代理设置和跳板机链（找循环）；tunnels.go 是隧道设置；keys.go 是退格键和删除键发送什么
-  importer/          读其他客户端的连接：finalshell.go 找 FinalShell 的目录、读 conn 里的连接和文件夹、判重、按文件夹导入；testdata 是编造的样例
+  importer/          读其他客户端的连接：importer.go 是来源列表（readers）、读出的连接和问题、文本解码（UTF-8、UTF-16、GB18030）、判重、按文件夹导入；finalshell.go 找 FinalShell 的目录、读 conn 里的连接和文件夹；testdata 是编造的样例
   sshx/              SSH 连接、认证、known_hosts、给终端用的 Conn；proxy.go 是经过 SOCKS5、HTTP CONNECT 和跳板机连接；forward.go 是端口转发（-L/-R/-D）和 SOCKS5 服务端
   termenc/           终端的连接在服务器的编码（GBK、Big5……）和终端读的 UTF-8 之间转换
   sshtest/           测试用的进程内 SSH 服务器：密码登录、空的 shell、端口转发，StartSFTP 还提供 SFTP（本机文件系统）
@@ -135,7 +136,8 @@ internal/
                      编辑器窗口的界面（标签、工具栏、提示、状态栏、询问框），编码和换行符、按 #! 认语言
     tunnels.go       会话的隧道：连接后启动、断开时停止，“隧道”页
     manager.go       连接管理器窗口：文件夹树、搜索、拖动、删除和恢复，a.deleteHostForever(h)
-    import.go        “从 FinalShell 导入”窗口：查找或选择目录、预览和勾选、导入后在连接管理器里显示
+    import.go        “导入连接”窗口：选择来源、查找或选择它的文件或目录、预览和勾选、导入后在连接管理器里显示、列表里的密码存进密钥库
+    import_sources.go 导入窗口里每个来源的文案（importTexts），以及来源给出的原因和说明的文案
     dialogs.go       密码、主机指纹、覆盖确认
     options.go       选项窗口：页面列表和“常规”页
     options_appearance.go “常规”页的“外观”：浅色、深色或跟随系统
@@ -163,7 +165,7 @@ internal/
 
 ## 子窗口
 
-和 FinalShell 一样，设置这类对话框是独立的窗口（MyGo 的子窗口，`WindowOptions.Parent`），不是主窗口里的浮层。目前有选项窗口、连接管理器、连接编辑器、“从 FinalShell 导入”窗口和文件编辑器，都是主窗口的子窗口，例外是从连接管理器打开的连接编辑器和导入窗口：它们是连接管理器的模态子窗口，和 FinalShell 一样。这样做的结果：
+和 FinalShell 一样，设置这类对话框是独立的窗口（MyGo 的子窗口，`WindowOptions.Parent`），不是主窗口里的浮层。目前有选项窗口、连接管理器、连接编辑器、“导入连接”窗口和文件编辑器，都是主窗口的子窗口，例外是从连接管理器打开的连接编辑器和导入窗口：它们是连接管理器的模态子窗口，和 FinalShell 一样。这样做的结果：
 
 - macOS 上编辑器是连接管理器的 sheet，盖在连接管理器上，不挡主窗口。sheet 没有标题栏，所以模态窗口在 macOS 上把标题（“编辑连接”或“新建连接”）显示在窗口顶部（`windows.go` 的 `sheets`）。连接管理器默认 900×640，比编辑器大，sheet 放得下。
 - Windows 上只禁用连接管理器，主窗口照常可用。
@@ -194,6 +196,30 @@ internal/
 给一页加内容：在新文件里写 `func (a *App) fontPage(c *ui.Context)`，把那一项的 `view: nil` 改成 `view: (*App).fontPage`。新页面就加一项 `{id: ..., parent: ..., title: locales.Xxx, view: ...}`。每项占几行，几个人同时改不同的页面不会改到同一行。
 
 页面里改设置用 `a.changeSettings(func() { ... })`，会保存并重绘所有窗口。
+
+## 加一个导入来源
+
+导入窗口列出 `internal/importer` 的来源，顺序是 `importer.go` 里 `readers` 的顺序。一个来源是一个 `Kind` 加一个 `Reader`：
+
+```go
+const Xshell Kind = "xshell"
+
+var xshellReader = &Reader{
+	Kind:   Xshell,
+	Folder: true,             // 用户选目录；否则选文件，
+	                          // 扩展名是 Extensions: []string{"csv"}（不写就是任意文件）
+	Find:   FindXshell,       // 默认的文件或目录，没有就是 ""；根本没有默认位置就是 nil
+	Read:   ReadXshell,       // func(path string) (*Source, error)
+}
+```
+
+步骤：
+
+1. `internal/importer/<来源>.go`：`Kind` 常量、`Reader`、它的 `Find` 和 `Read`，以及一段注释写清楚对这个格式知道什么、从哪里知道的。`Read` 返回的 `Source` 带着 `Kind` 和读的 `Path`；每个连接是一个 `Entry`：`Host`（没有 ID 和文件夹）、`Folder`（顶层是 nil）、`File`（某一行用 `At(file, line)`）、`KeyFile` 是来源写明的私钥文件、`NeedsKey` 是存在客户端自己密钥库里的私钥、`Note` 是没有导入的设置、`Password` 只给用户自己写的列表用（存进密钥库，不会写进 `hosts.json`）。读不了的是 `Problem`（`NewProblem`、`ReadProblem`）；一个连接都没有就返回 `ErrNoConnections`。`ReadText` 按文件实际的编码读文本文件，`sortSource` 按 FinalShell 那样排序。测试写在 `<来源>_test.go`，编造的样例放在 `testdata/<来源>/`。
+2. 在 `importer.go` 的 `readers` 里加一行，位置就是窗口里列出的位置。
+3. 在 `internal/app/import_sources.go` 的 `importTexts` 里加一项：列表里的名字、选择对话框的标题、文件类型的名字（有扩展名的文件来源）、找不到时说什么、表格上面的提示（加密密码的客户端用 `locales.ImportPasswordsNote(name)`）。新的 `Reason` 或 `Note` 在同一个文件的 `importProblemText` 或 `importNoteText` 里加文案。文案两种语言都要加（见[加一条文案](#加一条文案)）。
+
+来源没有文案时 `TestImportSourcesListed` 会失败。加来源不用改 `import.go` 的其他地方。
 
 ## 关闭和退出
 

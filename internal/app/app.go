@@ -44,6 +44,11 @@ type Platform interface {
 	// window of parent as OpenFile does, hidden folders shown: "" when
 	// canceled. It blocks too.
 	OpenFolder(parent WindowKind, title string) (string, error)
+	// OpenFileOfType asks for a file to read, as a list of connections to
+	// import, with one of extensions (without the dot; any file for none),
+	// files of which typeName names, over the window of parent as
+	// OpenFile does, hidden files shown: "" when canceled. It blocks too.
+	OpenFileOfType(parent WindowKind, title, typeName string, extensions []string) (string, error)
 	// DownloadsDir is where downloads go unless the user chooses.
 	DownloadsDir() string
 	// ShowInFolder shows a file in the system's file manager.
@@ -146,10 +151,12 @@ type App struct {
 	// The connection editor's fields, while its window is open.
 	editor *connEditor
 
-	// The import window's state (import.go), and what finds FinalShell's
-	// folder: importer.Find, which tests replace.
-	imp            *importState
-	findFinalShell func() string
+	// The import window's state (import.go); its sources,
+	// allImportSources() unless tests replace them, and the kind of the
+	// one chosen last, "" for the first.
+	imp           *importState
+	importSources []importSource
+	importKind    importer.Kind
 
 	// The password prompt: the password a connection takes (a saved
 	// host's, a jump host's or a proxy's), or a key's passphrase, and
@@ -209,8 +216,8 @@ func New(plat Platform) *App {
 		saveHosts:    config.SaveHosts,
 		saveSettings: config.SaveSettings,
 
-		findFinalShell: importer.Find,
-		home:           homeDir,
+		importSources: allImportSources(),
+		home:          homeDir,
 	}
 	a.hosts, _ = config.LoadHosts()
 	a.settings = config.LoadSettings()

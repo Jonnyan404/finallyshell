@@ -15,6 +15,7 @@ pull requests) are in [CONTRIBUTING.md](../../CONTRIBUTING.md) and
 - [Code structure](#code-structure)
 - [Child windows](#child-windows)
 - [Adding an options page](#adding-an-options-page)
+- [Adding an import source](#adding-an-import-source)
 - [Closing and quitting](#closing-and-quitting)
 - [Single instance](#single-instance)
 - [Adding a UI string](#adding-a-ui-string)
@@ -148,7 +149,7 @@ tools/release/       release tools: works out the next version, writes the relea
 tools/screenshots/   regenerates the README screenshots in docs/screenshots/ from the internal/app tests
 internal/
   config/            reading and writing hosts and folders (hosts.json) and settings, the background image copy, the config directory; proxy.go is the proxy settings and the jump host chain (finding loops); tunnels.go is the tunnel settings; keys.go is what Backspace and Delete send
-  importer/          reads other clients' connections: finalshell.go finds FinalShell's folder, reads the connections and folders in conn, finds duplicates, imports by folder; testdata has made-up samples
+  importer/          reads other clients' connections: importer.go is the list of sources (readers), the entries and problems they read, the text decoder (UTF-8, UTF-16, GB18030), finding duplicates and importing by folder; finalshell.go finds FinalShell's folder and reads the connections and folders in conn; testdata has made-up samples
   sshx/              SSH connection, authentication, known_hosts, the Conn the terminal uses; proxy.go connects through SOCKS5, HTTP CONNECT and jump hosts; forward.go is port forwarding (-L/-R/-D) and the SOCKS5 server
   termenc/           converting a terminal's connection between the server's encoding (GBK, Big5, ...) and the UTF-8 the terminal reads
   sshtest/           in-process SSH server for tests: password login, an empty shell, port forwarding; StartSFTP also serves SFTP (the local file system)
@@ -178,7 +179,8 @@ internal/
                      the editor window's UI (tabs, toolbar, notices, status bar, questions), encodings and line endings, detecting the language from #!
     tunnels.go       a session's tunnels: started after connecting, stopped on disconnect, the Tunnels tab
     manager.go       connection manager window: folder tree, search, dragging, delete and restore, a.deleteHostForever(h)
-    import.go        the "Import from FinalShell" window: finding or choosing the folder, preview and checkboxes, showing the result in the connection manager
+    import.go        the "Import connections" window: choosing the source, finding or choosing its file or folder, preview and checkboxes, showing the result in the connection manager, a list's passwords into the keychain
+    import_sources.go the import window's texts of each source (importTexts), and of the reasons and notes the sources give
     dialogs.go       password, host key and replace confirmations
     options.go       options window: the list of pages and the General page
     options_appearance.go the Appearance row of the General page: light, dark or the system's
@@ -211,7 +213,7 @@ other.
 As in FinalShell, settings-type dialogs are separate windows (MyGo child
 windows, `WindowOptions.Parent`), not overlays inside the main window. They
 are currently the Options window, the connection manager, the connection
-editor, the "Import from FinalShell" window and the file editor. All are
+editor, the "Import connections" window and the file editor. All are
 child windows of the main window, except the connection editor and the
 import window when opened from the connection manager: those are modal
 child windows of the connection manager, as in FinalShell. As a result:
@@ -284,6 +286,50 @@ same lines.
 
 On a page, change settings with `a.changeSettings(func() { ... })`, which
 saves them and redraws every window.
+
+## Adding an import source
+
+The import window lists the sources of `internal/importer`, in the order
+of `readers` in `importer.go`. A source is a `Kind` and a `Reader`:
+
+```go
+const Xshell Kind = "xshell"
+
+var xshellReader = &Reader{
+	Kind:   Xshell,
+	Folder: true,             // the user chooses a folder; else a file,
+	                          // of Extensions: []string{"csv"} (none: any)
+	Find:   FindXshell,       // the default file or folder, "" for none; nil for none at all
+	Read:   ReadXshell,       // func(path string) (*Source, error)
+}
+```
+
+To add one:
+
+1. `internal/importer/<source>.go`: the `Kind` constant, the `Reader`,
+   its `Find` and `Read`, and a comment on what is known of the format and
+   where it comes from. `Read` returns a `Source` with its `Kind` and the
+   `Path` read; each connection is an `Entry`: `Host` (no ID, no folder),
+   `Folder` (nil for the top level), `File` (`At(file, line)` for a line),
+   `KeyFile` for a key file the source names, `NeedsKey` for a key kept in
+   the client's own store, `Note` for a setting not imported, `Password`
+   only for a list the user wrote (it goes to the keychain, never to
+   `hosts.json`). What it cannot read is a `Problem` (`NewProblem`,
+   `ReadProblem`); with no connection at all, it returns
+   `ErrNoConnections`. `ReadText` reads a text file in whatever encoding
+   it is in, and `sortSource` sorts the result as FinalShell's is. Tests
+   go in `<source>_test.go`, made-up samples in `testdata/<source>/`.
+2. One line in `readers`, in `importer.go`, where the window lists it.
+3. One entry in `importTexts`, in `internal/app/import_sources.go`: its
+   name in the list, the chooser's title, the name of its file types (for
+   a file with extensions), what to say when nothing is found, and the
+   note above the list (`locales.ImportPasswordsNote(name)` for a client
+   that encrypts passwords). A new `Reason` or `Note` gets its text in
+   `importProblemText` or `importNoteText` there. The strings go in both
+   locales (see [Adding a UI string](#adding-a-ui-string)).
+
+`TestImportSourcesListed` fails for a source without texts. Nothing else
+in `import.go` changes for a source.
 
 ## Closing and quitting
 

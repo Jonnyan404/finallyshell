@@ -154,6 +154,15 @@ func (p *platform) OpenFolder(parent app.WindowKind, title string) (string, erro
 	return p.openOne(parent, mygo.OpenDialogOptions{Title: title, Directory: true, ShowHiddenFiles: true})
 }
 
+// OpenFileOfType shows hidden files, as ~/.ssh/config is.
+func (p *platform) OpenFileOfType(parent app.WindowKind, title, typeName string, extensions []string) (string, error) {
+	opts := mygo.OpenDialogOptions{Title: title, ShowHiddenFiles: true}
+	if len(extensions) > 0 {
+		opts.Filters = []mygo.FileFilter{{Name: typeName, Extensions: extensions}}
+	}
+	return p.openOne(parent, opts)
+}
+
 // openOne asks for one file as opts say, over the window of parent, or
 // the main window when that is not open: "" when canceled.
 func (p *platform) openOne(parent app.WindowKind, opts mygo.OpenDialogOptions) (string, error) {

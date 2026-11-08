@@ -30,12 +30,12 @@ func byName(t *testing.T, src *Source, name string) *Entry {
 }
 
 func TestReadFinalShell(t *testing.T) {
-	src, err := Read(filepath.Join("testdata", "finalshell"))
+	src, err := ReadFinalShell(filepath.Join("testdata", "finalshell"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := filepath.Join("testdata", "finalshell", "conn"); src.Conn != want {
-		t.Errorf("conn %q, want %q", src.Conn, want)
+	if want := filepath.Join("testdata", "finalshell", "conn"); src.Path != want {
+		t.Errorf("conn %q, want %q", src.Path, want)
 	}
 	var got []string
 	for _, e := range src.Entries {
@@ -50,13 +50,13 @@ func TestReadFinalShell(t *testing.T) {
 	// Password auth, the notes, monitoring on.
 	web := byName(t, src, "web-1")
 	if h := web.Host; h.Addr != "192.0.2.10" || h.Port != 0 || h.User != "root" || h.Auth != config.AuthPassword ||
-		h.Notes != "front end\nrack 4" || h.NoMonitor || h.ID != "" || h.Folder != "" || web.NeedsKey || web.Proxy || web.File != "1001_connect_config.json" {
+		h.Notes != "front end\nrack 4" || h.NoMonitor || h.ID != "" || h.Folder != "" || web.NeedsKey || web.Note != "" || web.File != "1001_connect_config.json" {
 		t.Errorf("web-1 %+v %+v", web, h)
 	}
 	// Key auth, a port as a string, a proxy not imported.
 	bastion := byName(t, src, "bastion")
 	if h := bastion.Host; h.Addr != "bastion.example.com" || h.Port != 2222 || h.User != "deploy" || h.Auth != config.AuthKey ||
-		h.KeyPath != "" || !bastion.NeedsKey || !bastion.Proxy || bastion.File != "f1prod/1002_connect_config.json" {
+		h.KeyPath != "" || !bastion.NeedsKey || bastion.Note != ProxyNotImported || bastion.File != "f1prod/1002_connect_config.json" {
 		t.Errorf("bastion %+v %+v", bastion, h)
 	}
 	// Nested folders, the exec channel off.
@@ -124,11 +124,11 @@ func maps(a, b map[string]Reason) bool {
 
 // The conn folder itself, and a folder FinalShell exported, read too.
 func TestReadConnAndExport(t *testing.T) {
-	src, err := Read(filepath.Join("testdata", "finalshell", "conn"))
+	src, err := ReadFinalShell(filepath.Join("testdata", "finalshell", "conn"))
 	if err != nil || len(src.Entries) != 6 {
 		t.Fatalf("conn: %v, %v", src, err)
 	}
-	src, err = Read(filepath.Join("testdata", "export"))
+	src, err = ReadFinalShell(filepath.Join("testdata", "export"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,16 +146,16 @@ func TestReadConnAndExport(t *testing.T) {
 func TestReadFails(t *testing.T) {
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "notes.json"), []byte("{}"), 0o600)
-	if _, err := Read(dir); !errors.Is(err, ErrNoConnections) {
+	if _, err := ReadFinalShell(dir); !errors.Is(err, ErrNoConnections) {
 		t.Errorf("a folder without connections: %v", err)
 	}
-	if _, err := Read(filepath.Join(dir, "missing")); err == nil || errors.Is(err, ErrNoConnections) {
+	if _, err := ReadFinalShell(filepath.Join(dir, "missing")); err == nil || errors.Is(err, ErrNoConnections) {
 		t.Errorf("a missing folder: %v", err)
 	}
 	// A large file is not read.
 	big := filepath.Join(dir, "big_connect_config.json")
 	os.WriteFile(big, []byte(`{"host":"192.0.2.1","name":"`+strings.Repeat("x", maxFileSize)+`"}`), 0o600)
-	src, err := Read(dir)
+	src, err := ReadFinalShell(dir)
 	if err != nil || len(src.Entries) != 0 || len(src.Problems) != 1 || src.Problems[0].Reason != TooLarge {
 		t.Errorf("a large file: %+v, %v", src, err)
 	}
@@ -181,20 +181,20 @@ func TestCandidatesAndFind(t *testing.T) {
 
 	// Find takes the first candidate with a conn folder.
 	none, data := t.TempDir(), filepath.Join("testdata", "finalshell")
-	old := Candidates
-	t.Cleanup(func() { Candidates = old })
-	Candidates = func() []string { return []string{none, data} }
-	if got := Find(); got != data {
+	old := FinalShellCandidates
+	t.Cleanup(func() { FinalShellCandidates = old })
+	FinalShellCandidates = func() []string { return []string{none, data} }
+	if got := FindFinalShell(); got != data {
 		t.Errorf("found %q", got)
 	}
-	Candidates = func() []string { return []string{none} }
-	if got := Find(); got != "" {
+	FinalShellCandidates = func() []string { return []string{none} }
+	if got := FindFinalShell(); got != "" {
 		t.Errorf("found %q in none", got)
 	}
 }
 
 func TestImport(t *testing.T) {
-	src, err := Read(filepath.Join("testdata", "finalshell"))
+	src, err := ReadFinalShell(filepath.Join("testdata", "finalshell"))
 	if err != nil {
 		t.Fatal(err)
 	}

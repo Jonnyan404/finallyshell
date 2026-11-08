@@ -654,19 +654,13 @@
     }
   },
   "listSeparator": ", ",
-  "importFinalShell": "Import from FinalShell",
   "import": "Import",
-  "importTitle": "Import from FinalShell",
+  "importTitle": "Import connections",
+  "importFrom": "Import from",
+  "importSourceFinalShell": "FinalShell",
   "chooseFinalShellFolder": "Choose FinalShell's data folder",
   "chooseFolder": "Choose folder…",
-  "finalShellFolderAt": "FinalShell folder: {dir}",
-  "@finalShellFolderAt": {
-    "placeholders": {
-      "dir": {
-        "type": "String"
-      }
-    }
-  },
+  "chooseFile": "Choose file…",
   "problemLine": "{file}: {reason}",
   "@problemLine": {
     "description": "A file not imported from, and why.",
@@ -679,25 +673,32 @@
       }
     }
   },
-  "importLooking": "Looking for FinalShell's connections…",
+  "importLooking": "Looking for connections…",
   "finalShellNotFound": "FinalShell's data folder was not found. Choose the folder FinalShell keeps its data in, the one with a conn folder in it, or a folder exported from FinalShell.",
-  "finalShellNoConnections": "No FinalShell connections in {dir}.",
-  "@finalShellNoConnections": {
+  "importNoConnections": "No connections found in {path}.",
+  "@importNoConnections": {
     "placeholders": {
-      "dir": {
+      "path": {
         "type": "String"
       }
     }
   },
-  "finalShellReadFailed": "Could not read the folder: {error}",
-  "@finalShellReadFailed": {
+  "importReadFailed": "Could not read it: {error}",
+  "@importReadFailed": {
     "placeholders": {
       "error": {
         "type": "String"
       }
     }
   },
-  "importPasswordsNote": "Passwords are not imported, as FinalShell encrypts them: each is asked for at the first connection.",
+  "importPasswordsNote": "Passwords are not imported, as {source} encrypts them: each is asked for at the first connection.",
+  "@importPasswordsNote": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
   "importColFolder": "Folder",
   "importColStatus": "Note",
   "selectAll": "Select all",
@@ -740,7 +741,7 @@
   "importNeedsKey": "Choose the key file after importing",
   "importNoProxy": "Proxy not imported",
   "importNothing": "No SSH connections to import.",
-  "importProblems": "Files not imported: {failed} failed, {skipped} skipped",
+  "importProblems": "Not imported: {failed} failed, {skipped} skipped",
   "@importProblems": {
     "placeholders": {
       "failed": {
@@ -756,7 +757,14 @@
   "problemTooLarge": "too large for a connection file",
   "problemNoHost": "no host address",
   "problemNotSSH": "not an SSH connection, skipped",
-  "problemDeleted": "deleted in FinalShell, skipped",
+  "problemDeleted": "deleted in {source}, skipped",
+  "@problemDeleted": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
   "importResult": "Imported {imported, plural, one {# connection} other {# connections}}, skipped {skipped}, failed {failed}.",
   "@importResult": {
     "placeholders": {
