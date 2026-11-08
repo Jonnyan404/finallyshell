@@ -2,10 +2,11 @@ package main
 
 import "strings"
 
-// Notes is the Markdown of a release's notes: its breaking changes,
-// features, fixes and performance work, newest first as given. Commits
-// of other types are left out.
-func Notes(commits []Commit) string {
+// Draft lists the breaking changes, features, fixes and performance work
+// of the commits, newest first as given, in Markdown: a start for writing
+// a version's section of CHANGELOG.md. Commits of other types are left
+// out.
+func Draft(commits []Commit) string {
 	sections := []struct {
 		title string
 		match func(Commit) bool

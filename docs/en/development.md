@@ -109,26 +109,57 @@ editor) come from the existing tests of those windows.
 
 ## Releasing
 
-Pushing main to the `production` branch is a release:
+A release is a version's section in `CHANGELOG.md`: write it, merge it,
+then push main to the `production` branch.
 
-```sh
-git push origin origin/main:production
-```
+1. Add the section on top of `CHANGELOG.md`, below the title, in the
+   last pull request merged before the release or in one of its own:
+
+   ```markdown
+   ## 0.2.2
+
+   ### English
+
+   - …
+
+   ### 简体中文
+
+   - …
+   ```
+
+   The heading is the version, `MAJOR.MINOR.PATCH`, higher than the last
+   `v*` tag; the owner chooses it. Both parts are needed: every release's
+   notes are in English and Simplified Chinese. Write what users see and
+   do, not the commit titles; `go run ./tools/release draft` lists the
+   `feat`, `fix`, `perf` and breaking commits since the last tag to start
+   from. Keep each bullet on one line, so no line break puts a space
+   inside Chinese text. `TestChangelogFile` (tools/release) checks the file
+   in every pull request: its headings are versions, newest first, and
+   the newest section has both parts. The file starts at 0.2.1; earlier
+   versions' notes are on their GitHub releases.
+2. Merge it, then:
+
+   ```sh
+   git push origin origin/main:production
+   ```
 
 `.github/workflows/release.yml` then:
 
-1. Works out the version (`go run ./tools/release version`) from the
-   commit types (Conventional Commits) since the last `v*` tag:
-   - a breaking change (`feat!:`, `BREAKING CHANGE:`) bumps the major
-     version, or the minor version before 1.0;
-   - a `feat` bumps the minor version;
-   - only `fix` and `perf` bump the patch version;
-   - only `docs`, `chore`, `test`, `ci`, `build`, `style` and `refactor`
-     make no release, and the workflow stops here.
+1. Works out the version (`go run ./tools/release version`): the newest
+   section of `CHANGELOG.md`, when it is newer than the last `v*` tag.
+   When that version is already tagged, there is nothing to release and
+   the workflow stops here, so pushing main without a new section, or
+   re-running the workflow, releases nothing. It fails, before anything
+   is built, when the section is older than the last tag, a heading is
+   not a version, or the section lacks its English or Chinese part. With
+   no tag yet, the newest section is the first release.
 
-   With no tag yet, the version in `mygo.json` is used (the first release
-   was 0.2.0). A commit that already has a tag is not released again, so
-   re-running the workflow is safe.
+   The commit types (Conventional Commits) since the last tag only check
+   the version: a breaking change (`feat!:`, `BREAKING CHANGE:`) calls
+   for a major bump (minor before 1.0), a `feat` for a minor one, `fix`
+   and `perf` for a patch. A version lower than that is a warning on the
+   run, and the release goes on: 0.2.1, after the `feat` commits since
+   0.2.0, is one.
 2. Runs the same checks as pull requests (`.github/workflows/ci.yml`:
    gofmt, `go vet`, `go tool mygo vet`, `go test -race`).
 3. Builds for three platforms: macOS arm64 on a macOS runner (ad hoc
@@ -145,21 +176,23 @@ git push origin origin/main:production
    (`finallyshell-<version>-<platform>.tar.gz`), deltas from the last
    three releases that have updates (`…-<from>-to-<version>-….delta`) and
    the manifest `update-<platform>.json`, which names them with their
-   signatures. The job fails when the secret is missing, when there is no
-   manifest, or when the manifest is not this version in this release,
-   and otherwise copies the manifest and the files it names with the
+   signatures. The manifest's notes, which the update window shows, are
+   the version's section of `CHANGELOG.md`; `mygo build` fails without
+   one. The job fails when the secret is missing, when there is no
+   manifest, when the manifest is not this version in this release, or
+   when its notes are not `go run ./tools/release notes <version>`, and
+   otherwise copies the manifest and the files it names with the
    installers.
 4. Checks that the manifests of all three platforms are there, then tags
    `v<version>` and publishes a GitHub Release with the installers, the
    updates, `SHA256SUMS`, `LICENSE.txt` and `THIRD_PARTY_LICENSES.txt`.
-   The release notes are grouped by commit type
-   (`go run ./tools/release notes`). The release is published, not a
-   draft, as installed apps read the manifests of the latest release;
-   `gh release create` keeps it a draft while it uploads the files, so
-   apps never see a manifest whose archive is not there yet.
-
-There is no `CHANGELOG.md`, so the manifests carry no release notes and
-the update window shows none.
+   Its notes are the version's section
+   (`go run ./tools/release notes <version>`), then
+   `.github/release-install.md`, how to install, in English and Chinese.
+   The release is published, not a draft, as installed apps read the
+   manifests of the latest release; `gh release create` keeps it a draft
+   while it uploads the files, so apps never see a manifest whose archive
+   is not there yet.
 
 `production` should only ever be fast-forwarded from main; protect it in
 the repository settings (no force pushes).
@@ -192,6 +225,9 @@ key and serve them from your machine:
 
 1. `go tool mygo keygen -o /tmp/keys`, and in a copy of `mygo.json` set
    `updates` to that public key and `"url": "https://localhost:8443/u"`.
+   A build with a key needs its version's section in `CHANGELOG.md`, so
+   add `## 0.2.0` and `## 0.3.0` sections to a scratch copy, or point
+   `updates.changelog` at a file that has them.
 2. With `MYGO_UPDATER_PRIVATE_KEY="$(cat /tmp/keys/mygo-update.key)"`,
    build version 0.2.0 (`go tool mygo build -o dist-old`), serve its
    archive and manifest over HTTPS from `u/` with a self-signed
@@ -217,7 +253,7 @@ tray.go              tray icon, the confirmation message box, quitting
 updates.go           the update window (MyGo's updater plugin, native UI), the Updates row's status, the macOS app menu with "Check for Updates…"
 keychain.go          the system credential store (mygo.Secrets): Platform's SecretGet/Set/Delete
 locales/             UI strings: en.json, zh-Hans.json; catalog_gen.go is generated by mygo, do not edit it by hand
-tools/release/       release tools: works out the next version, writes the release notes, collects third-party licenses (notices/ has the licenses of libraries packaged as binaries)
+tools/release/       release tools: the next version and its notes from CHANGELOG.md, a draft of them from the commits, the third-party licenses (notices/ has the licenses of libraries packaged as binaries)
 tools/screenshots/   regenerates the README screenshots in docs/screenshots/ from the internal/app tests
 internal/
   config/            reading and writing hosts and folders (hosts.json) and settings, the background image copy, the config directory; proxy.go is the proxy settings and the jump host chain (finding loops); tunnels.go is the tunnel settings; keys.go is what Backspace and Delete send

@@ -4,9 +4,11 @@ name: release
 #
 #   git push origin origin/main:production
 #
-# The commits since the last v* tag decide the version (tools/release);
-# with no feat, fix, perf or breaking change there is nothing to release
-# and the run stops after the version job.
+# The newest section of CHANGELOG.md is the version and its release notes
+# (tools/release). When that version is already tagged there is nothing to
+# release and the run stops after the version job; a section older than
+# the last tag, or not in English and Simplified Chinese, fails that job,
+# before anything is built.
 on:
   push:
     branches: [production]
@@ -34,12 +36,12 @@ jobs:
         with:
           go-version-file: go.mod
       - id: next
+        # Prints the version, or nothing, and says why on stderr; it warns
+        # when the version is lower than the commit types since the last
+        # tag call for (0.2.1 after feat commits), and goes on.
         run: |
           version=$(go run ./tools/release version)
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          if [ -z "$version" ]; then
-            echo "::notice::Nothing to release"
-          fi
 
   gate:
     needs: version
@@ -82,7 +84,8 @@ jobs:
       - name: Build
         # With the secret key, mygo build also signs an update of the app
         # for installed copies: an archive, deltas from the last releases
-        # and update-<platform>.json (updates in mygo.json). Without it,
+        # and update-<platform>.json (updates in mygo.json), whose notes
+        # are the version's section of CHANGELOG.md. Without it,
         # it would build apps that installed copies cannot update to.
         env:
           MYGO_UPDATER_PRIVATE_KEY: ${{ secrets.MYGO_UPDATER_PRIVATE_KEY }}
@@ -124,6 +127,13 @@ jobs:
             "$manifest" > /dev/null; then
             echo "::error::$manifest is not version $VERSION in $prefix:"
             cat "$manifest"
+            exit 1
+          fi
+          # The update window shows the same notes as the release page.
+          notes=$(go run ./tools/release notes "$VERSION")
+          if [ "$(jq -r '.notes // ""' "$manifest")" != "$notes" ]; then
+            echo "::error::The notes in $manifest are not the $VERSION section of CHANGELOG.md:"
+            jq -r '.notes // ""' "$manifest"
             exit 1
           fi
           cp "$manifest" upload/
@@ -173,9 +183,11 @@ jobs:
           (cd upload && sha256sum * > SHA256SUMS)
           cat upload/SHA256SUMS
       - name: Release notes
+        # The version's section of CHANGELOG.md, in both languages, then
+        # how to install, in both too.
         run: |
           {
-            go run ./tools/release notes
+            go run ./tools/release notes "$VERSION"
             echo
             cat .github/release-install.md
           } > notes.md

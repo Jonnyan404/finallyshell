@@ -1401,8 +1401,8 @@ Notes:
   an update, macOS may ask again whether Finallyshell may use the
   passwords it saved in the keychain, as it does after installing a new
   version by hand. This is not yet checked on a real Mac.
-- The update window shows no release notes yet; they are on the
-  releases page.
+- The update window shows the new version's release notes, in English and
+  Chinese, the same as its page on GitHub (`CHANGELOG.md`).
 - Prereleases, notarization on macOS, Authenticode on Windows and an apt
   repository for the `.deb` are not supported.
 

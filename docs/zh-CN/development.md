@@ -75,28 +75,39 @@ go run ./tools/screenshots
 
 ## 发布
 
-把 main 推到 `production` 分支就是发布：
+发布一个版本，就是在 `CHANGELOG.md` 里写好它的一节，合并，再把 main 推到 `production` 分支。
 
-```sh
-git push origin origin/main:production
-```
+1. 在 `CHANGELOG.md` 最上面、标题下面加这一节，放在发布前最后合并的那个 PR 里，或者单独开一个 PR：
+
+   ```markdown
+   ## 0.2.2
+
+   ### English
+
+   - …
+
+   ### 简体中文
+
+   - …
+   ```
+
+   标题是版本号，格式是 `MAJOR.MINOR.PATCH`，要比上一个 `v*` tag 高，由所有者决定。两部分都要有：每次发布的说明都有英文和简体中文。写用户看得到、用得到的变化，不要照搬提交标题；`go run ./tools/release draft` 会列出上一个 tag 之后的 `feat`、`fix`、`perf` 和破坏性改动的提交，可以从这里开始写。每条写在一行里，免得换行在中文里多出空格。tools/release 的 `TestChangelogFile` 在每个 PR 里检查这个文件：标题都是版本号、新的在前，最新的一节两种语言都有。这个文件从 0.2.1 开始，更早版本的说明在它们的 GitHub Release 上。
+2. 合并以后运行：
+
+   ```sh
+   git push origin origin/main:production
+   ```
 
 `.github/workflows/release.yml` 接着做这些事：
 
-1. 算版本号（`go run ./tools/release version`）：看上一个 `v*` tag 之后的提交类型（Conventional Commits）：
-   - 有破坏性改动（`feat!:`、`BREAKING CHANGE:`）升主版本，1.0 之前升次版本；
-   - 有 `feat` 升次版本；
-   - 只有 `fix`、`perf` 升修订号；
-   - 只有 `docs`、`chore`、`test`、`ci`、`build`、`style`、`refactor` 不发布，workflow 到这里结束。
+1. 算版本号（`go run ./tools/release version`）：`CHANGELOG.md` 最新的一节，比上一个 `v*` tag 新的时候就是要发布的版本。这个版本已经打过 tag 时没有要发布的，workflow 到这里结束，所以没有新的一节就推 main，或者重新运行 workflow，都不会发布。这一节比上一个 tag 旧、有标题不是版本号、或者缺英文或中文部分时失败，这时什么都还没编译。还没有 tag 时，最新的一节就是第一次发布。
 
-   还没有 tag 时用 `mygo.json` 里的版本（第一次发布是 0.2.0）。已经打过 tag 的提交不会再发布，所以重新运行是安全的。
+   上一个 tag 之后的提交类型（Conventional Commits）只用来核对版本号：破坏性改动（`feat!:`、`BREAKING CHANGE:`）应该升主版本（1.0 之前升次版本），`feat` 升次版本，`fix` 和 `perf` 升修订号。版本号比这个低时在运行记录里给出警告，照样发布：0.2.0 之后有 `feat` 提交，0.2.1 就是这种情况。
 2. 跑和 PR 一样的检查（`.github/workflows/ci.yml`：gofmt、`go vet`、`go tool mygo vet`、`go test -race`）。
 3. 编译三个平台：macOS arm64 在 macOS runner 上（ad hoc 签名、dmg），Linux x86_64 和 Windows x86_64 在 Linux runner 上交叉编译（Windows 安装程序用 apt 装的 NSIS）。版本号只在 runner 里写进 `mygo.json`，main 上的不改。`LICENSE` 和第三方许可证（`go run ./tools/release licenses`）放进 `resources/`，随应用一起打包。
 
-   编译时有私钥 `MYGO_UPDATER_PRIVATE_KEY`（见[给更新签名](#给更新签名)），所以 `mygo build` 还会写出每个平台的更新：打成压缩包的应用（`finallyshell-<版本>-<平台>.tar.gz`）、从最近三个有更新的发布出发的增量更新（`…-<旧版本>-to-<版本>-….delta`），以及列出它们和签名的清单 `update-<平台>.json`。没有这个 secret、没有清单、或者清单不是这个版本、这个发布的，任务失败；否则把清单和它列出的文件跟安装包放在一起。
-4. 检查三个平台的清单都在，然后打 tag `v<版本>`，发布 GitHub Release，附上安装包、更新文件、`SHA256SUMS`、`LICENSE.txt`、`THIRD_PARTY_LICENSES.txt`。说明按提交类型分组（`go run ./tools/release notes`）。发布是正式发布，不是草稿，因为已安装的应用读取的是最新发布的清单；`gh release create` 上传文件期间让它保持草稿，所以应用不会看到压缩包还没上传的清单。
-
-仓库里没有 `CHANGELOG.md`，所以清单里没有更新说明，更新窗口也不显示说明。
+   编译时有私钥 `MYGO_UPDATER_PRIVATE_KEY`（见[给更新签名](#给更新签名)），所以 `mygo build` 还会写出每个平台的更新：打成压缩包的应用（`finallyshell-<版本>-<平台>.tar.gz`）、从最近三个有更新的发布出发的增量更新（`…-<旧版本>-to-<版本>-….delta`），以及列出它们和签名的清单 `update-<平台>.json`。清单里的说明就是 `CHANGELOG.md` 里这个版本的一节，更新窗口显示的也是它；没有这一节 `mygo build` 会失败。没有这个 secret、没有清单、清单不是这个版本、这个发布的，或者清单里的说明和 `go run ./tools/release notes <版本>` 不一样，任务失败；否则把清单和它列出的文件跟安装包放在一起。
+4. 检查三个平台的清单都在，然后打 tag `v<版本>`，发布 GitHub Release，附上安装包、更新文件、`SHA256SUMS`、`LICENSE.txt`、`THIRD_PARTY_LICENSES.txt`。说明是这个版本的一节（`go run ./tools/release notes <版本>`），后面接上 `.github/release-install.md`，即中英文的安装说明。发布是正式发布，不是草稿，因为已安装的应用读取的是最新发布的清单；`gh release create` 上传文件期间让它保持草稿，所以应用不会看到压缩包还没上传的清单。
 
 `production` 只应该从 main 快进，在仓库设置里给它加分支保护（禁止强推）。
 
@@ -112,7 +123,7 @@ git push origin origin/main:production
 
 不发布也能试更新：用一次性的密钥编译两个版本，从本机提供下载：
 
-1. `go tool mygo keygen -o /tmp/keys`，在 `mygo.json` 的副本里把 `updates` 设成这个公钥和 `"url": "https://localhost:8443/u"`。
+1. `go tool mygo keygen -o /tmp/keys`，在 `mygo.json` 的副本里把 `updates` 设成这个公钥和 `"url": "https://localhost:8443/u"`。有密钥的编译需要 `CHANGELOG.md` 里有这个版本的一节，所以在副本里加上 `## 0.2.0` 和 `## 0.3.0` 两节，或者让 `updates.changelog` 指向有这两节的文件。
 2. 设 `MYGO_UPDATER_PRIVATE_KEY="$(cat /tmp/keys/mygo-update.key)"`，编译 0.2.0（`go tool mygo build -o dist-old`），用给 `localhost` 的自签名证书通过 HTTPS 在 `u/` 下提供它的压缩包和清单；再编译 0.3.0，它会生成从这个 0.2.0 出发的增量更新。提供它的压缩包、增量更新和清单。
 3. 把 0.2.0 的压缩包解压到 `~/.local/finallyshell.app`（用单独的 `HOME`），启动时让 `SSL_CERT_FILE` 指向包含这个证书的证书包，并设 `NO_PROXY=localhost`。10 秒后出现更新窗口。在 `updater.json` 里写 `{"automaticDownloads": true}` 就不问直接安装。
 
@@ -128,7 +139,7 @@ tray.go              托盘图标、确认用的消息框、退出
 updates.go           更新窗口（MyGo 的 updater 插件，原生 UI）、“更新”那一行的状态、带“检查更新…”的 macOS 应用菜单
 keychain.go          系统凭据存储（mygo.Secrets）：Platform 的 SecretGet/Set/Delete
 locales/             界面文案：en.json、zh-Hans.json；catalog_gen.go 由 mygo 生成，不要手改
-tools/release/       发布用的工具：算下一个版本号、生成 release 说明、收集第三方许可证（notices/ 是以二进制打包的库的许可证）
+tools/release/       发布用的工具：从 CHANGELOG.md 读出下一个版本号和更新说明，按提交列出草稿，收集第三方许可证（notices/ 是以二进制打包的库的许可证）
 tools/screenshots/   从 internal/app 的测试重新生成 docs/screenshots/ 里的 README 截图
 internal/
   config/            主机和文件夹（hosts.json）、设置的读写，背景图片的副本，配置目录；proxy.go 是代理设置和跳板机链（找循环）；tunnels.go 是隧道设置；keys.go 是退格键和删除键发送什么

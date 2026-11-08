@@ -669,7 +669,7 @@ Finallyshell 从 GitHub 上的发布自行更新，用的是 MyGo 的签名更�
 
 - 0.2.0 及更早的版本没有更新功能：带更新功能的第一个版本需要手动安装一次，之后的版本会自行更新。
 - macOS 版是 ad hoc 签名的，每次编译的签名都不一样。更新之后，macOS 可能会再问一次是否允许 Finallyshell 使用它存在钥匙串里的密码，和手动安装新版本之后一样。这一点还没有在真的 Mac 上确认。
-- 更新窗口暂时不显示更新说明，说明在发布页面上。
+- 更新窗口显示新版本的更新说明，中英文都有，和它在 GitHub 上的发布页面一样（`CHANGELOG.md`）。
 - 不支持预发布版本、macOS 公证、Windows 的 Authenticode 签名，也没有给 `.deb` 的 apt 软件源。
 
 用户的选择（自动检查、不问直接安装、跳过的版本、上次检查的时间）保存在 `updater.json`，见 [configuration.md](configuration.md#updaterjson)。

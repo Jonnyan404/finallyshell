@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -49,7 +50,8 @@ func (b Bump) String() string {
 
 // BumpOf is the bump the commits call for: a breaking change is major,
 // feat is minor, fix and perf are patch, and the other types (docs,
-// chore, test, ci, build, style, refactor) release nothing.
+// chore, test, ci, build, style, refactor) call for none. Release only
+// warns when the chosen version is lower.
 func BumpOf(commits []Commit) Bump {
 	b := None
 	for _, c := range commits {
@@ -88,6 +90,17 @@ func ParseVersion(s string) (Version, error) {
 
 func (v Version) String() string { return fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch) }
 
+// Compare is -1, 0 or +1 as v is lower than, the same as or higher than w.
+func (v Version) Compare(w Version) int {
+	if c := cmp.Compare(v.Major, w.Major); c != 0 {
+		return c
+	}
+	if c := cmp.Compare(v.Minor, w.Minor); c != 0 {
+		return c
+	}
+	return cmp.Compare(v.Patch, w.Patch)
+}
+
 // Next is v raised by b. Before 1.0.0 a breaking change raises the minor
 // version, as 0.x versions promise no compatibility.
 func (v Version) Next(b Bump) Version {
@@ -103,30 +116,4 @@ func (v Version) Next(b Bump) Version {
 		return Version{v.Major, v.Minor, v.Patch + 1}
 	}
 	return v
-}
-
-// NextVersion is the version to release, or "" for none. last is the
-// latest release tag ("" when there is none yet), base the version in
-// mygo.json, which the first release uses, and headTagged whether the
-// commit to release already has a release tag.
-func NextVersion(last, base string, commits []Commit, headTagged bool) (string, error) {
-	if headTagged {
-		return "", nil
-	}
-	if last == "" {
-		v, err := ParseVersion(base)
-		if err != nil {
-			return "", fmt.Errorf("mygo.json: %v", err)
-		}
-		return v.String(), nil
-	}
-	v, err := ParseVersion(last)
-	if err != nil {
-		return "", fmt.Errorf("tag %s: %v", last, err)
-	}
-	b := BumpOf(commits)
-	if b == None {
-		return "", nil
-	}
-	return v.Next(b).String(), nil
 }

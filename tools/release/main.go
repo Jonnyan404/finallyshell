@@ -1,63 +1,87 @@
-// Command release computes the next release of the app from its git
-// history and writes what a release ships besides the builds. The release
-// workflow (.github/workflows/release.yml) runs it from the repository's
-// root:
+// Command release works out the next release of the app and writes what a
+// release ships besides the builds. The release workflow
+// (.github/workflows/release.yml) runs it from the repository's root:
 //
-//	go run ./tools/release version    # the next version, or nothing
-//	go run ./tools/release notes      # Markdown notes since the last release
-//	go run ./tools/release licenses   # THIRD_PARTY_LICENSES.txt
+//	go run ./tools/release version          # the next version, or nothing
+//	go run ./tools/release notes [version]  # its notes, from CHANGELOG.md
+//	go run ./tools/release draft            # the commits since the last release
+//	go run ./tools/release licenses         # THIRD_PARTY_LICENSES.txt
 //
-// Releases are tagged vMAJOR.MINOR.PATCH. The commits since the last tag
-// decide the next version by their Conventional Commits type: a breaking
-// change raises the major version (the minor one before 1.0.0), feat the
-// minor one, fix and perf the patch one, and the other types release
-// nothing. With no tag yet, the version in mygo.json is the first release.
+// Releases are tagged vMAJOR.MINOR.PATCH. CHANGELOG.md, written by hand,
+// has a section per version, newest first, with the notes in English and
+// Simplified Chinese; mygo build puts the same section into the update
+// manifests. Its newest section is the next version when it is newer than
+// the last tag; otherwise there is nothing to release. The commits since
+// the last tag only check that version by their Conventional Commits type
+// (see BumpOf): a version lower than they call for is a warning.
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 )
 
+// changelog is the file of the release notes, which mygo build reads too.
+const changelog = "CHANGELOG.md"
+
 func main() {
-	if len(os.Args) != 2 {
+	args := os.Args[1:]
+	if len(args) == 0 {
 		usage()
 	}
 	var err error
-	switch os.Args[1] {
-	case "version":
+	switch {
+	case args[0] == "version" && len(args) == 1:
 		err = printVersion()
-	case "notes":
-		err = printNotes()
-	case "licenses":
+	case args[0] == "notes" && len(args) <= 2:
+		err = printNotes(args[1:])
+	case args[0] == "draft" && len(args) == 1:
+		err = printDraft()
+	case args[0] == "licenses" && len(args) == 1:
 		err = ThirdPartyLicenses(".", os.Stdout)
 	default:
 		usage()
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "release:", err)
+		report("error", err.Error())
 		os.Exit(1)
 	}
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: go run ./tools/release version|notes|licenses")
+	fmt.Fprintln(os.Stderr, "usage: go run ./tools/release version | notes [version] | draft | licenses")
 	os.Exit(2)
 }
 
+// report writes a message to stderr; in GitHub Actions, as an annotation
+// of the run (level "error", "warning" or "notice").
+func report(level, msg string) {
+	switch {
+	case os.Getenv("GITHUB_ACTIONS") == "true":
+		fmt.Fprintf(os.Stderr, "::%s::release: %s\n", level, msg)
+	case level == "notice":
+		fmt.Fprintf(os.Stderr, "release: %s\n", msg)
+	default:
+		fmt.Fprintf(os.Stderr, "release: %s: %s\n", level, msg)
+	}
+}
+
+func readChangelog() ([]Section, error) {
+	b, err := os.ReadFile(changelog)
+	if err != nil {
+		return nil, err
+	}
+	return ParseChangelog(changelog, string(b))
+}
+
 func printVersion() error {
+	sections, err := readChangelog()
+	if err != nil {
+		return err
+	}
 	last, err := lastTag()
-	if err != nil {
-		return err
-	}
-	tagged, err := headTagged()
-	if err != nil {
-		return err
-	}
-	base, err := mygoVersion()
 	if err != nil {
 		return err
 	}
@@ -65,27 +89,51 @@ func printVersion() error {
 	if err != nil {
 		return err
 	}
-	v, err := NextVersion(last, base, commits, tagged)
+	v, warning, err := Release(changelog, sections, last, commits)
 	if err != nil {
 		return err
 	}
+	if warning != "" {
+		report("warning", warning)
+	}
 	switch {
-	case tagged:
-		fmt.Fprintln(os.Stderr, "release: HEAD is already released")
 	case v == "":
-		fmt.Fprintf(os.Stderr, "release: nothing to release since %s (no feat, fix, perf or breaking change)\n", last)
+		report("notice", fmt.Sprintf("nothing to release: %s, the newest section of %s, is released as %s; add a section for the next version", sections[0].Version, changelog, last))
+	case last == "":
+		report("notice", v+", the first release")
+		fmt.Println(v)
 	default:
-		if last == "" {
-			fmt.Fprintf(os.Stderr, "release: %s (the first release, from mygo.json)\n", v)
-		} else {
-			fmt.Fprintf(os.Stderr, "release: %s (%s since %s)\n", v, BumpOf(commits), last)
-		}
+		report("notice", fmt.Sprintf("%s, after %s", v, last))
 		fmt.Println(v)
 	}
 	return nil
 }
 
-func printNotes() error {
+// printNotes prints the section of the version given, or else the newest.
+func printNotes(args []string) error {
+	sections, err := readChangelog()
+	if err != nil {
+		return err
+	}
+	s := sections[0]
+	if len(args) == 1 {
+		v, err := ParseVersion(args[0])
+		if err != nil {
+			return err
+		}
+		var ok bool
+		if s, ok = Find(sections, v); !ok {
+			return fmt.Errorf("%s has no section for %s: add a \"## %s\" section", changelog, v, v)
+		}
+	}
+	if err := Check(changelog, s); err != nil {
+		return err
+	}
+	fmt.Println(s.Notes)
+	return nil
+}
+
+func printDraft() error {
 	last, err := lastTag()
 	if err != nil {
 		return err
@@ -94,7 +142,7 @@ func printNotes() error {
 	if err != nil {
 		return err
 	}
-	fmt.Print(Notes(commits))
+	fmt.Print(Draft(commits))
 	return nil
 }
 
@@ -112,7 +160,8 @@ func git(args ...string) (string, error) {
 	return string(out), nil
 }
 
-// lastTag is the newest release tag reachable from HEAD, or "".
+// lastTag is the newest release tag reachable from HEAD, HEAD's own
+// included, or "".
 func lastTag() (string, error) {
 	tags, err := git("tag", "--merged", "HEAD", "--list", tagPattern, "--sort=-v:refname")
 	if err != nil {
@@ -124,19 +173,6 @@ func lastTag() (string, error) {
 		}
 	}
 	return "", nil
-}
-
-func headTagged() (bool, error) {
-	tags, err := git("tag", "--points-at", "HEAD", "--list", tagPattern)
-	if err != nil {
-		return false, err
-	}
-	for _, t := range strings.Fields(tags) {
-		if _, err := ParseVersion(t); err == nil {
-			return true, nil
-		}
-	}
-	return false, nil
 }
 
 // commitsSince lists the commits after tag up to HEAD, newest first, or
@@ -160,16 +196,4 @@ func commitsSince(tag string) ([]Commit, error) {
 		commits = append(commits, ParseCommit(subject, body))
 	}
 	return commits, nil
-}
-
-func mygoVersion() (string, error) {
-	b, err := os.ReadFile("mygo.json")
-	if err != nil {
-		return "", err
-	}
-	var c struct{ Version string }
-	if err := json.Unmarshal(b, &c); err != nil {
-		return "", fmt.Errorf("mygo.json: %v", err)
-	}
-	return c.Version, nil
 }
