@@ -13,6 +13,7 @@ supported. [configuration.md](configuration.md) covers the files on disk;
 - [Connection manager](#connection-manager)
 - [Import connections](#import-connections)
   - [From FinalShell](#from-finalshell)
+  - [From SecureCRT](#from-securecrt)
   - [From MobaXterm](#from-mobaxterm)
   - [From an SSH config](#from-an-ssh-config)
 - [Connection editor](#connection-editor)
@@ -284,6 +285,52 @@ LiteShell, MeatShell, OpenFinalShell), summarized in the comments of
 `internal/importer/finalshell.go`. Parsing is lenient: unknown fields are
 ignored, missing ones get defaults (port 22, password authentication), and
 a port written as a string is accepted.
+
+### From SecureCRT
+
+SecureCRT keeps one `.ini` file per session in the `Sessions` folder of
+its config folder, with a subfolder for each of its folders. Finallyshell
+looks for the config folder at:
+
+- Windows: `%APPDATA%\VanDyke\Config`.
+- macOS: `~/Library/Application Support/VanDyke/SecureCRT/Config`.
+- Linux: `~/.vandyke/SecureCRT/Config`.
+
+SecureCRT can move its config folder (Options › Global Options › General ›
+Configuration Paths shows where it is). Choose the config folder, its
+`Sessions` folder, or a folder in it. `Default.ini` at the top of
+`Sessions` holds SecureCRT's default settings and `__FolderData__.ini`
+the order of a folder's sessions: neither is a session.
+
+Fields that are imported: name (the file name without `.ini`), host,
+port, user, notes (the session's description) and folder. SSH2 and SSH1
+sessions are imported; Telnet, Serial, RLogin, RDP and other sessions
+count as skipped.
+
+- Passwords are not imported. SecureCRT stores them encrypted in the
+  session files; Finallyshell does not decrypt them and does not read
+  those lines.
+- A session with a key file of its own (public key options) is imported
+  with "Private key" authentication and that key file: the private key,
+  when SecureCRT names its `.pub` file. `${VDS_CONFIG_PATH}` in the path
+  is the config folder. A session that uses SecureCRT's global key gets
+  the global key file, from `SSH2.ini` in the config folder, when its
+  authentication methods try a public key before a password. A key path
+  that cannot be resolved (another SecureCRT variable, or a Windows path
+  on macOS or Linux) leaves the key file to choose, as the Note column
+  says.
+- Firewalls are not imported: a session through a proxy says "Proxy not
+  imported" in the Note column, and one through another session, a jump
+  host, says "Jump host not imported". Port forwarding, logon actions,
+  terminal and appearance settings are not imported either.
+
+SecureCRT's file format has no official documentation. The import follows
+VanDyke's scripting examples and the SecureCRT readers of other open
+source projects, summarized in the comments of
+`internal/importer/securecrt.go`. Parsing is lenient: lines in other
+formats and options it does not use are ignored, missing ones get
+defaults (SSH2, port 22, password authentication), and multi-line values
+(binary values, and lists other than the description) are skipped.
 
 ### From MobaXterm
 
