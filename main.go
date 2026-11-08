@@ -254,6 +254,8 @@ func (p *platform) SetFullScreen(on bool) { p.win.SetFullScreen(on) }
 func (p *platform) IsFullScreen() bool    { return p.win.IsFullScreen() }
 
 func main() {
+	// Before the first window: MyGo reads MYGO_GPU when it makes one.
+	useMemoryRendering()
 	// One instance at a time: launching the app again brings the running
 	// one's window back, from the tray too (raise), and two instances never
 	// write hosts.json and settings.json over each other. This runs before
