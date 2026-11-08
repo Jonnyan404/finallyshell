@@ -21,6 +21,13 @@ import (
 // instead (9–50 ms on a Haswell Iris Pro). An explicit MYGO_GPU in the
 // environment still decides, so a machine whose driver is fine can ask for the
 // GPU back with MYGO_GPU=1.
+//
+// TODO(egoist/mygo#1505): remove this default once that change ships. It makes
+// MyGo draw a frame that timed out in memory and retry the GPU later, so the
+// failure heals itself per frame and Intel Macs no longer need to give up the
+// GPU wholesale — which here costs CPU time on every Intel Mac whose driver was
+// never patched, not just on the OCLP ones. The workaround is this function and
+// memoryRendering below; drop both, and TestMemoryRendering with them.
 func useMemoryRendering() {
 	if memoryRendering(runtime.GOOS, runtime.GOARCH, os.Getenv("MYGO_GPU")) {
 		os.Setenv("MYGO_GPU", "0")
