@@ -79,7 +79,21 @@ jobs:
           mkdir -p resources
           cp LICENSE resources/LICENSE.txt
           go run ./tools/release licenses > resources/THIRD_PARTY_LICENSES.txt
-      - run: go tool mygo build -platform "$PLATFORM" -o dist
+      - name: Build
+        # With the secret key, mygo build also signs an update of the app
+        # for installed copies: an archive, deltas from the last releases
+        # and update-<platform>.json (updates in mygo.json). Without it,
+        # it would build apps that installed copies cannot update to.
+        env:
+          MYGO_UPDATER_PRIVATE_KEY: ${{ secrets.MYGO_UPDATER_PRIVATE_KEY }}
+          # Finds the earlier releases that deltas start from.
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$MYGO_UPDATER_PRIVATE_KEY" ]; then
+            echo "::error::The MYGO_UPDATER_PRIVATE_KEY secret is not set: installed apps could not update to this release"
+            exit 1
+          fi
+          go tool mygo build -platform "$PLATFORM" -o dist
       - name: Collect the files to publish
         run: |
           dir="dist/${PLATFORM/\//-}"
@@ -98,6 +112,24 @@ jobs:
               Finallyshell.exe ghostty-vt.dll LICENSE.txt THIRD_PARTY_LICENSES.txt)
             ;;
           esac
+          # The update: its manifest, and the archive and deltas it names.
+          manifest="$dir/update-${PLATFORM/\//-}.json"
+          if [ ! -f "$manifest" ]; then
+            echo "::error::mygo build wrote no $manifest: installed apps could not update to this release"
+            exit 1
+          fi
+          prefix="https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/"
+          if ! jq -e --arg v "$VERSION" --arg p "$prefix" \
+            '.version == $v and (.url | startswith($p)) and all((.deltas // [])[]; .url | startswith($p))' \
+            "$manifest" > /dev/null; then
+            echo "::error::$manifest is not version $VERSION in $prefix:"
+            cat "$manifest"
+            exit 1
+          fi
+          cp "$manifest" upload/
+          jq -r '.url, (.deltas // [])[].url' "$manifest" | while read -r url; do
+            cp "$dir/${url##*/}" upload/
+          done
           ls -l upload
       - uses: actions/upload-artifact@v7
         with:
@@ -124,6 +156,16 @@ jobs:
         with:
           path: upload
           merge-multiple: true
+      - name: Check the updates
+        # Apps read the manifests of the latest release: one missing strands
+        # that platform's installed copies at their version.
+        run: |
+          for p in darwin-arm64 linux-amd64 windows-amd64; do
+            if [ ! -f "upload/update-$p.json" ]; then
+              echo "::error::update-$p.json is missing: installed apps could not update to this release"
+              exit 1
+            fi
+          done
       - name: Licenses and checksums
         run: |
           cp LICENSE upload/LICENSE.txt
@@ -138,6 +180,9 @@ jobs:
             cat .github/release-install.md
           } > notes.md
       - name: Publish
+        # Published, not a draft: apps read the update manifests from the
+        # latest release. gh keeps the release a draft while it uploads the
+        # files, so apps never see a manifest whose archive is not there.
         run: |
           gh release create "v$VERSION" upload/* \
             --target "$GITHUB_SHA" \
