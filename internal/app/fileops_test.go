@@ -181,6 +181,25 @@ func TestFileOpsInTable(t *testing.T) {
 		t.Errorf("notes.md %v, big.log %v, deploy.sh %v", f.exists("notes.md"), f.exists("big.log"), f.exists("deploy.sh"))
 	}
 
+	// A delete that fails half way asks again for what is left: here
+	// ghost isn't there, so the first try removes legacy.ini and fails.
+	a.askDelete(s, f.dir, []string{"legacy.ini", "ghost"}, false)
+	tt.Frame()
+	tt.Click(locales.Delete())
+	f.settled(t)
+	if a.fileDlg == nil || a.fileDlg.err == nil || f.exists("legacy.ini") {
+		t.Fatalf("dialog %+v; legacy.ini %v", a.fileDlg, f.exists("legacy.ini"))
+	}
+	if !slices.Equal(a.fileDlg.names, []string{"ghost"}) || !tt.HasText(locales.DeleteFileTitle("ghost")) {
+		t.Fatalf("left %q; texts %q", a.fileDlg.names, tt.Texts())
+	}
+	os.WriteFile(filepath.Join(f.dir, "ghost"), nil, 0o644)
+	tt.Click(locales.Delete())
+	f.settled(t)
+	if a.fileDlg != nil || f.exists("ghost") {
+		t.Fatalf("the second try: dialog %+v; ghost %v", a.fileDlg, f.exists("ghost"))
+	}
+
 	// The dialogs in Chinese.
 	f.p.SetLocale("zh-Hans")
 	f.menu(t, "deploy.sh", locales.Rename())

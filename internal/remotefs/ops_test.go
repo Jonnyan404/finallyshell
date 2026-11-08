@@ -115,6 +115,17 @@ func TestRemoveAll(t *testing.T) {
 		t.Errorf("missing: %v", err)
 	}
 
+	// A canceled delete removes nothing, a file as a folder.
+	writeFile(t, filepath.Join(dir, "kept.txt"), []byte("x"))
+	done, stop := context.WithCancel(context.Background())
+	stop()
+	if err := RemoveAll(done, c, filepath.Join(dir, "kept.txt")); !IsCanceled(err) {
+		t.Errorf("canceled file: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(dir, "kept.txt")); err != nil {
+		t.Errorf("a canceled delete removed kept.txt: %v", err)
+	}
+
 	// A canceled delete stops.
 	writeFile(t, filepath.Join(dir, "big", "a", "f"), []byte("x"))
 	ctx, cancel := context.WithCancel(context.Background())

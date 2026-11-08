@@ -87,8 +87,12 @@ const removeWorkers = 16
 
 // RemoveAll deletes the file or link at p, or the folder with all it
 // holds. It never follows links: a link to a folder goes, the folder it
-// points to stays. It stops at the first error, or when ctx ends.
+// points to stays. It stops at the first error, or when ctx ends, and
+// removes nothing once ctx has ended.
 func RemoveAll(ctx context.Context, c *sftp.Client, p string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	fi, err := c.Lstat(p)
 	if err != nil {
 		return err

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"path"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -146,6 +147,13 @@ func (a *App) runFileDialog(d *fileDialog) {
 			cancel()
 			d.busy = false
 			a.filesChanged(d, made, gone, err)
+			// A delete that failed half way asks again for what is left
+			// alone: what it removed is no longer there to remove.
+			if d.op == opDelete {
+				d.names = slices.DeleteFunc(d.names, func(n string) bool {
+					return slices.Contains(gone, path.Join(d.dir, n))
+				})
+			}
 			if a.fileDlg != d {
 				return
 			}
