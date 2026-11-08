@@ -139,6 +139,7 @@ tray.go              托盘图标、确认用的消息框、退出
 updates.go           更新窗口（MyGo 的 updater 插件，原生 UI）、“更新”那一行的状态、带“检查更新…”的 macOS 应用菜单
 keychain.go          系统凭据存储（mygo.Secrets）：Platform 的 SecretGet/Set/Delete
 locales/             界面文案：en.json、zh-Hans.json；catalog_gen.go 由 mygo 生成，不要手改
+tools/natives/       CI 跑测试前先下载 libghostty-vt，最多重试五分钟（见“测试”）
 tools/release/       发布用的工具：从 CHANGELOG.md 读出下一个版本号和更新说明，按提交列出草稿，收集第三方许可证（notices/ 是以二进制打包的库的许可证）
 tools/screenshots/   从 internal/app 的测试重新生成 docs/screenshots/ 里的 README 截图
 internal/
