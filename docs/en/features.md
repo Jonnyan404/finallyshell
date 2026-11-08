@@ -298,9 +298,11 @@ looks for the config folder at:
 
 SecureCRT can move its config folder (Options › Global Options › General ›
 Configuration Paths shows where it is). Choose the config folder, its
-`Sessions` folder, or a folder in it. `Default.ini` at the top of
-`Sessions` holds SecureCRT's default settings and `__FolderData__.ini`
-the order of a folder's sessions: neither is a session.
+`Sessions` folder, or a folder in it (its sessions are imported with the
+folders under it). `Default.ini` at the top of `Sessions` holds
+SecureCRT's default settings and `__FolderData__.ini` the order of a
+folder's sessions: neither is a session. At most 10,000 session files
+are read; the first one past that is listed as failed.
 
 Fields that are imported: name (the file name without `.ini`), host,
 port, user, notes (the session's description) and folder. SSH2 and SSH1
@@ -316,8 +318,9 @@ count as skipped.
   is the config folder. A session that uses SecureCRT's global key gets
   the global key file, from `SSH2.ini` in the config folder, when its
   authentication methods try a public key before a password. A key path
-  that cannot be resolved (another SecureCRT variable, or a Windows path
-  on macOS or Linux) leaves the key file to choose, as the Note column
+  that cannot be resolved (another SecureCRT variable, a Windows path on
+  macOS or Linux, or the global key when no `SSH2.ini` is found next to
+  the `Sessions` folder) leaves the key file to choose, as the Note column
   says.
 - Firewalls are not imported: a session through a proxy says "Proxy not
   imported" in the Note column, and one through another session, a jump

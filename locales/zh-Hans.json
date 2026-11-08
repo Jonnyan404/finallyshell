@@ -502,6 +502,7 @@
   "problemBroken": "不是有效的连接文件",
   "problemUnreadable": "无法读取",
   "problemTooLarge": "文件太大，不是连接文件",
+  "problemTooManyFiles": "文件太多：这个文件和之后的文件都没有读取",
   "problemNoHost": "没有主机地址",
   "problemNotSSH": "不是 SSH 连接，已跳过",
   "problemDeleted": "在 {source} 里已删除，已跳过",

@@ -58,7 +58,9 @@ import (
 //	                       not the session's
 //	SSH2 Authentications V2  the methods in order, "password,publickey,…":
 //	                       with the global key, publickey before password
-//	                       is a key host
+//	                       is a key host (a rule of this reader, not
+//	                       verified against SecureCRT's behavior or a
+//	                       user's files)
 //	Firewall Name          "None", the name of a proxy of the Global
 //	                       Options (ProxyNotImported), or "Session:<path>"
 //	                       for a jump host (JumpHostNotImported): neither
@@ -66,8 +68,11 @@ import (
 //
 // Default.ini is skipped at the top of Sessions only: in a folder, it is a
 // session named Default. The session's name is its file's, without .ini.
-// The key of a variable other than ${VDS_CONFIG_PATH}, or a Windows path
-// read on another system, is a key to choose after importing (NeedsKey).
+// The config folder is the parent of the Sessions folder chosen, or of
+// the one the folder chosen is in. The key of a variable other than
+// ${VDS_CONFIG_PATH}, a Windows path read on another system, or the
+// global key when SSH2.ini could not be read, is a key to choose after
+// importing (NeedsKey).
 // Passwords (Password V2,
 // Password in older versions) are encrypted with a key of SecureCRT's,
 // or with the user's config passphrase: the parser keeps only the options
@@ -96,6 +101,11 @@ import (
 const SecureCRT Kind = "securecrt"
 
 var secureCRTReader = &Reader{Kind: SecureCRT, Folder: true, Find: FindSecureCRT, Read: ReadSecureCRT}
+
+// TooManyFiles is the first session file of a folder with more than an
+// import reads (maxFiles), as a home folder chosen by mistake: it and the
+// files after it are not read.
+const TooManyFiles Reason = "too-many-files"
 
 // SessionsDir is the name of SecureCRT's folder of sessions, in its config
 // folder.
@@ -150,28 +160,49 @@ func FindSecureCRT() string {
 // are Problems, as are sessions it does not import; Entries are in folder
 // order, then by name. It fails when dir cannot be read, or has no
 // session's file at all.
-func ReadSecureCRT(dir string) (*Source, error) {
-	sessions, configDir := dir, ""
-	if sub := filepath.Join(dir, SessionsDir); isDir(sub) {
-		sessions, configDir = sub, dir
-	} else if strings.EqualFold(filepath.Base(filepath.Clean(dir)), SessionsDir) {
-		configDir = filepath.Dir(filepath.Clean(dir))
-	}
-	if _, err := os.ReadDir(sessions); err != nil {
+func ReadSecureCRT(dir string) (*Source, error) { return readSecureCRT(dir, maxFiles) }
+
+// readSecureCRT is ReadSecureCRT reading at most limit session files.
+func readSecureCRT(dir string, limit int) (*Source, error) {
+	read, root, configDir := secureCRTFolders(dir)
+	if _, err := os.ReadDir(read); err != nil {
 		return nil, err
 	}
-	r := &crtReader{src: &Source{Kind: SecureCRT, Path: sessions}, configDir: configDir}
+	r := &crtReader{src: &Source{Kind: SecureCRT, Path: read}, configDir: configDir, maxFiles: limit}
 	if configDir != "" {
 		if text, err := ReadText(filepath.Join(configDir, "SSH2.ini")); err == nil {
-			r.globalKey = parseCRT(text).identity()
+			r.globalKey, r.globalKnown = parseCRT(text).identity(), true
 		}
 	}
-	r.walk(sessions, nil, 0)
+	r.walk(read, nil, 0, read == root)
 	if r.sessionFiles == 0 {
-		return nil, fmt.Errorf("%s: %w", sessions, ErrNoConnections)
+		return nil, fmt.Errorf("%s: %w", read, ErrNoConnections)
 	}
 	sortSource(r.src)
 	return r.src, nil
+}
+
+// secureCRTFolders are the folders of dir, the folder chosen: read, the
+// folder to read (its Sessions folder for a config folder, else dir);
+// root, the Sessions folder it is or is in, the nearest folder of that
+// name from read up, else read itself, as a copy of a Sessions folder
+// named otherwise; and configDir, the config folder, root's parent: ""
+// when no Sessions folder was found. Entries' folders are those under
+// read: choosing Sessions/Production imports its sessions at the top
+// level.
+func secureCRTFolders(dir string) (read, root, configDir string) {
+	read = filepath.Clean(dir)
+	if sub := filepath.Join(read, SessionsDir); isDir(sub) {
+		return sub, sub, read
+	}
+	for p := read; ; p = filepath.Dir(p) {
+		if strings.EqualFold(filepath.Base(p), SessionsDir) {
+			return read, p, filepath.Dir(p)
+		}
+		if filepath.Dir(p) == p {
+			return read, read, ""
+		}
+	}
 }
 
 type crtReader struct {
@@ -180,14 +211,21 @@ type crtReader struct {
 	// not known.
 	configDir string
 	// globalKey is SSH2.ini's Identity Filename V2: "" for none.
-	globalKey    string
+	globalKey string
+	// globalKnown is set when SSH2.ini was read, so that globalKey is
+	// the global key.
+	globalKnown bool
+	// maxFiles is the most session files read: those after it are one
+	// problem, TooManyFiles.
+	maxFiles     int
 	files        int
 	sessionFiles int
 }
 
 // walk reads the folder abs, at depth, which is the folder path folder:
-// nil for the Sessions folder.
-func (r *crtReader) walk(abs string, folder []string, depth int) {
+// nil for the folder read. root is set for the Sessions folder, whose
+// Default.ini is no session.
+func (r *crtReader) walk(abs string, folder []string, depth int, root bool) {
 	entries, err := os.ReadDir(abs)
 	if err != nil {
 		if folder != nil {
@@ -200,14 +238,14 @@ func (r *crtReader) walk(abs string, folder []string, depth int) {
 		path, rel := filepath.Join(abs, name), append(folder[:len(folder):len(folder)], name)
 		if e.IsDir() {
 			if depth < maxDepth {
-				r.walk(path, rel, depth+1)
+				r.walk(path, rel, depth+1, false)
 			}
 			continue
 		}
 		ext := filepath.Ext(name)
 		stem := name[:len(name)-len(ext)]
 		if !strings.EqualFold(ext, ".ini") ||
-			strings.EqualFold(stem, "__FolderData__") || folder == nil && strings.EqualFold(stem, "Default") {
+			strings.EqualFold(stem, "__FolderData__") || root && strings.EqualFold(stem, "Default") {
 			continue
 		}
 		r.sessionFiles++
@@ -218,10 +256,13 @@ func (r *crtReader) walk(abs string, folder []string, depth int) {
 // read reads the session's file at path, rel to the Sessions folder, the
 // session named name in the folder path folder.
 func (r *crtReader) read(path, rel, name string, folder []string) {
-	if r.files >= maxFiles {
+	r.files++
+	if r.files > r.maxFiles {
+		if r.files == r.maxFiles+1 { // once, for the first not read
+			r.problem(rel, TooManyFiles, nil)
+		}
 		return
 	}
-	r.files++
 	if st, err := os.Stat(path); err == nil && st.Size() > maxFileSize {
 		r.problem(rel, TooLarge, nil)
 		return
@@ -265,12 +306,14 @@ func (r *crtReader) read(path, rel, name string, folder []string) {
 		h.Port = int(port)
 	}
 	e := &Entry{File: rel, Host: h, Folder: folder}
-	if key, global := r.key(s); key != "" {
-		file, needsKey := secureCRTKey(key, r.configDir, runtime.GOOS)
-		if global && !s.prefersKey() {
-			file, needsKey = "", false
-		}
-		if file != "" || needsKey {
+	switch key, global := r.key(s); {
+	case global && !s.prefersKey():
+		// The password is tried first: the global key is not imported.
+	case global && !r.globalKnown:
+		// SSH2.ini was not read: the global key is to choose.
+		h.Auth, e.NeedsKey = config.AuthKey, true
+	case key != "":
+		if file, needsKey := secureCRTKey(key, r.configDir, runtime.GOOS); file != "" || needsKey {
 			h.Auth, e.KeyFile, e.NeedsKey = config.AuthKey, file, needsKey
 		}
 	}

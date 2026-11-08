@@ -787,6 +787,7 @@
   "problemBroken": "not a valid connection file",
   "problemUnreadable": "could not be read",
   "problemTooLarge": "too large for a connection file",
+  "problemTooManyFiles": "too many files: this one and those after it were not read",
   "problemNoHost": "no host address",
   "problemNotSSH": "not an SSH connection, skipped",
   "problemDeleted": "deleted in {source}, skipped",

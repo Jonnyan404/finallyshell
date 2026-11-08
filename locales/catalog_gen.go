@@ -5110,6 +5110,16 @@ func (msgs Messages) ProblemTooLarge() string {
 	return Catalog.Format(msgs.locale, "problemTooLarge", nil)
 }
 
+// ProblemTooManyFiles says "too many files: this one and those after it were not read"
+// in the language the app shows.
+func ProblemTooManyFiles() string { return In(i18n.Locale()).ProblemTooManyFiles() }
+
+// ProblemTooManyFiles says "too many files: this one and those after it were not read"
+// in the language of msgs.
+func (msgs Messages) ProblemTooManyFiles() string {
+	return Catalog.Format(msgs.locale, "problemTooManyFiles", nil)
+}
+
 // ProblemNoHost says "no host address"
 // in the language the app shows.
 func ProblemNoHost() string { return In(i18n.Locale()).ProblemNoHost() }

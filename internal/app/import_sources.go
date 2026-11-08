@@ -95,6 +95,8 @@ func importProblemText(p importer.Problem, source string) string {
 		return locales.ProblemUnreadable()
 	case importer.TooLarge:
 		return locales.ProblemTooLarge()
+	case importer.TooManyFiles:
+		return locales.ProblemTooManyFiles()
 	case importer.NoHost:
 		return locales.ProblemNoHost()
 	case importer.NotSSH:

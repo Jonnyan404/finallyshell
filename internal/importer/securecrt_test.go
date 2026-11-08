@@ -147,13 +147,75 @@ func TestReadSecureCRTSessions(t *testing.T) {
 	for _, e := range src.Entries {
 		got = append(got, e.FolderLabel()+"|"+e.Host.Title())
 	}
-	// The config folder is not known: the key of ${VDS_CONFIG_PATH} is
-	// chosen after importing.
+	// The folders are those under the folder chosen; the config folder is
+	// the parent of the Sessions folder it is in.
 	if want := []string{"|bastion", "Databases|db-1", "Databases|Default"}; !slices.Equal(got, want) || len(src.Problems) != 0 {
 		t.Errorf("Production %q, problems %v; want %q", got, src.Problems, want)
 	}
-	if e := crtEntry(t, src, "bastion"); e.KeyFile != "" || !e.NeedsKey {
+	if e := crtEntry(t, src, "bastion"); e.KeyFile != filepath.Join(crtSample, "Keys", "bastion_ed25519") || e.NeedsKey {
 		t.Errorf("bastion %+v", e)
+	}
+
+	// A folder with Default.ini, not the Sessions folder: it is a session.
+	src, err = ReadSecureCRT(filepath.Join(crtSample, "Sessions", "Production", "Databases"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got = nil
+	for _, e := range src.Entries {
+		got = append(got, e.FolderLabel()+"|"+e.Host.Title())
+	}
+	if want := []string{"|db-1", "|Default"}; !slices.Equal(got, want) {
+		t.Errorf("Databases %q; want %q", got, want)
+	}
+
+	// Lab: SSH2.ini is read, and the global key found.
+	src, err = ReadSecureCRT(filepath.Join(crtSample, "Sessions", "Lab"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := crtEntry(t, src, "global-key"); e.Host.Auth != config.AuthKey || e.KeyFile != filepath.Join(crtSample, "Keys", "Identity") || e.NeedsKey {
+		t.Errorf("Lab's global-key %+v %+v", e, e.Host)
+	}
+}
+
+// A Sessions folder without a config folder around it: its Default.ini
+// is still no session, and a session of the global key, which SSH2.ini
+// would name, has a key to choose.
+func TestReadSecureCRTNoConfig(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "copied sessions")
+	if err := os.CopyFS(dir, os.DirFS(filepath.Join(crtSample, "Sessions", "Lab"))); err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(filepath.Join(dir, "Default.ini"), []byte("S:\"Hostname\"=192.0.2.250\n"), 0o600)
+	src, err := ReadSecureCRT(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(src.Entries) != 2 {
+		t.Errorf("entries %+v", src.Entries)
+	}
+	if e := crtEntry(t, src, "global-key"); e.Host.Auth != config.AuthKey || e.KeyFile != "" || !e.NeedsKey {
+		t.Errorf("global-key %+v %+v", e, e.Host)
+	}
+	// Its own key, of a variable not known, is to choose too.
+	if e := crtEntry(t, src, "legacy"); e.Host.Auth != config.AuthKey || !e.NeedsKey {
+		t.Errorf("legacy %+v %+v", e, e.Host)
+	}
+}
+
+func TestSecureCRTFolders(t *testing.T) {
+	cfg := filepath.Join("a", "Config")
+	for _, c := range []struct{ dir, read, root, configDir string }{
+		{crtSample, filepath.Join(crtSample, "Sessions"), filepath.Join(crtSample, "Sessions"), crtSample},
+		{filepath.Join(cfg, "Sessions"), filepath.Join(cfg, "Sessions"), filepath.Join(cfg, "Sessions"), cfg},
+		{filepath.Join(cfg, "sessions", "Lab", "Pi") + string(filepath.Separator), filepath.Join(cfg, "sessions", "Lab", "Pi"), filepath.Join(cfg, "sessions"), cfg},
+		{filepath.Join("a", "copy"), filepath.Join("a", "copy"), filepath.Join("a", "copy"), ""},
+	} {
+		read, root, configDir := secureCRTFolders(c.dir)
+		if read != c.read || root != c.root || configDir != c.configDir {
+			t.Errorf("%s: %q %q %q, want %q %q %q", c.dir, read, root, configDir, c.read, c.root, c.configDir)
+		}
 	}
 }
 
@@ -175,6 +237,27 @@ func TestReadSecureCRTFails(t *testing.T) {
 	src, err := ReadSecureCRT(dir)
 	if err != nil || len(src.Entries) != 0 || len(src.Problems) != 1 || src.Problems[0].Reason != TooLarge {
 		t.Errorf("a large file: %+v, %v", src, err)
+	}
+}
+
+// Past the limit of files, the files are one problem, which fails.
+func TestReadSecureCRTTooMany(t *testing.T) {
+	src, err := readSecureCRT(crtSample, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var many []string
+	for _, p := range src.Problems {
+		if p.Reason == TooManyFiles {
+			many = append(many, p.File)
+		}
+	}
+	if len(many) != 1 || !TooManyFiles.Failed() {
+		t.Errorf("too many: %q in %v", many, src.Problems)
+	}
+	// Those read are 3, of entries and problems besides.
+	if n := len(src.Entries) + len(src.Problems) - 1; n != 3 {
+		t.Errorf("read %d: %v %v", n, src.Entries, src.Problems)
 	}
 }
 

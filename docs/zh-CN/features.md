@@ -167,12 +167,12 @@ SecureCRT 在配置文件夹的 `Sessions` 文件夹里每个会话存一个 `.i
 - macOS：`~/Library/Application Support/VanDyke/SecureCRT/Config`。
 - Linux：`~/.vandyke/SecureCRT/Config`。
 
-SecureCRT 可以把配置文件夹放到别处（Options › Global Options › General › Configuration Paths 里能看到在哪）。可以选配置文件夹、它的 `Sessions` 文件夹，或者里面的某个文件夹。`Sessions` 顶层的 `Default.ini` 是 SecureCRT 的默认设置，`__FolderData__.ini` 是文件夹里会话的顺序，都不是会话。
+SecureCRT 可以把配置文件夹放到别处（Options › Global Options › General › Configuration Paths 里能看到在哪）。可以选配置文件夹、它的 `Sessions` 文件夹，或者里面的某个文件夹（导入它的会话，文件夹从它下面算起）。`Sessions` 顶层的 `Default.ini` 是 SecureCRT 的默认设置，`__FolderData__.ini` 是文件夹里会话的顺序，都不是会话。最多读 10000 个会话文件，超出后的第一个列为失败。
 
 导入的字段：名称（去掉 `.ini` 的文件名）、主机、端口、用户名、备注（会话的描述）、文件夹。导入 SSH2 和 SSH1 会话；Telnet、Serial、RLogin、RDP 等会话算跳过。
 
 - 密码不导入。SecureCRT 把密码加密存在会话文件里，Finallyshell 不解密，也不读这些行。
-- 有自己的私钥文件的会话（公钥选项里设的）导入后是“私钥”认证，用这个私钥文件；SecureCRT 写的是 `.pub` 文件时，用对应的私钥。路径里的 `${VDS_CONFIG_PATH}` 是配置文件夹。用 SecureCRT 全局私钥的会话，如果它的认证方法里公钥排在密码前面，就用配置文件夹里 `SSH2.ini` 写的全局私钥文件。认不出的私钥路径（别的 SecureCRT 变量，或者在 macOS、Linux 上读到 Windows 路径）导入后要自己选私钥文件，“说明”列会提示。
+- 有自己的私钥文件的会话（公钥选项里设的）导入后是“私钥”认证，用这个私钥文件；SecureCRT 写的是 `.pub` 文件时，用对应的私钥。路径里的 `${VDS_CONFIG_PATH}` 是配置文件夹。用 SecureCRT 全局私钥的会话，如果它的认证方法里公钥排在密码前面，就用配置文件夹里 `SSH2.ini` 写的全局私钥文件。认不出的私钥路径（别的 SecureCRT 变量、在 macOS、Linux 上读到 Windows 路径，或者 `Sessions` 文件夹旁边找不到 `SSH2.ini` 时的全局私钥）导入后要自己选私钥文件，“说明”列会提示。
 - 防火墙设置不导入：通过代理连接的会话在“说明”列写“代理没有导入”，通过另一个会话（跳板机）连接的写“跳板机没有导入”。端口转发、登录动作、终端和外观设置也不导入。
 
 SecureCRT 的文件格式没有官方文档，导入按 VanDyke 的脚本示例和其他开源项目的 SecureCRT 读取代码整理，写在 `internal/importer/securecrt.go` 的注释里。解析尽量宽松：别的格式的行和用不到的选项忽略，缺的用默认值（SSH2、端口 22、密码认证），多行的值（二进制值，以及描述以外的列表）跳过。
