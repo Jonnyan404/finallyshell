@@ -17,6 +17,9 @@
 //     Read, and a comment on what is known of its format and where that
 //     is from. Its tests go in <source>_test.go, made-up samples in
 //     testdata/<source>/ (documentation addresses, no real secrets).
+//     Reasons and Notes of its own are constants there too; a reason for
+//     a connection skipped on purpose, not failed, goes in skipped in an
+//     init there: func init() { skipped[Telnet] = true }.
 //  2. Put its Reader in readers, below, where the window should list it.
 //  3. Give it its texts in the app: an entry in importTexts, in
 //     internal/app/import_sources.go, with the strings in locales/, and
@@ -165,9 +168,16 @@ const (
 	DeletedThere Reason = "deleted"
 )
 
+// skipped are the reasons of connections skipped on purpose, rather than
+// failed to import. A source that adds such a reason adds it here in an
+// init of its own file, so that sources do not edit the same lines:
+//
+//	func init() { skipped[Telnet] = true }
+var skipped = map[Reason]bool{NotSSH: true, DeletedThere: true}
+
 // Failed tells whether a problem with the reason r failed to import,
 // rather than was skipped on purpose.
-func (r Reason) Failed() bool { return r != NotSSH && r != DeletedThere }
+func (r Reason) Failed() bool { return !skipped[r] }
 
 // Problem is a file, or a line of one, a Reader did not take a
 // connection from.

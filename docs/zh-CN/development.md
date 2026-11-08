@@ -215,7 +215,7 @@ var xshellReader = &Reader{
 
 步骤：
 
-1. `internal/importer/<来源>.go`：`Kind` 常量、`Reader`、它的 `Find` 和 `Read`，以及一段注释写清楚对这个格式知道什么、从哪里知道的。`Read` 返回的 `Source` 带着 `Kind` 和读的 `Path`；每个连接是一个 `Entry`：`Host`（没有 ID 和文件夹）、`Folder`（顶层是 nil）、`File`（某一行用 `At(file, line)`）、`KeyFile` 是来源写明的私钥文件、`NeedsKey` 是存在客户端自己密钥库里的私钥、`Note` 是没有导入的设置、`Password` 只给用户自己写的列表用（存进密钥库，不会写进 `hosts.json`）。读不了的是 `Problem`（`NewProblem`、`ReadProblem`）；一个连接都没有就返回 `ErrNoConnections`。`ReadText` 按文件实际的编码读文本文件，`sortSource` 按 FinalShell 那样排序。测试写在 `<来源>_test.go`，编造的样例放在 `testdata/<来源>/`。
+1. `internal/importer/<来源>.go`：`Kind` 常量、`Reader`、它的 `Find` 和 `Read`，以及一段注释写清楚对这个格式知道什么、从哪里知道的。`Read` 返回的 `Source` 带着 `Kind` 和读的 `Path`；每个连接是一个 `Entry`：`Host`（没有 ID 和文件夹）、`Folder`（顶层是 nil）、`File`（某一行用 `At(file, line)`）、`KeyFile` 是来源写明的私钥文件、`NeedsKey` 是存在客户端自己密钥库里的私钥、`Note` 是没有导入的设置、`Password` 只给用户自己写的列表用（存进密钥库，不会写进 `hosts.json`）。读不了的是 `Problem`（`NewProblem`、`ReadProblem`）；一个连接都没有就返回 `ErrNoConnections`。来源自己的 `Reason` 或 `Note` 是这个文件里的常量；故意跳过（不算失败）的原因在这个文件的 `init` 里加进 `skipped`：`func init() { skipped[Telnet] = true }`。`ReadText` 按文件实际的编码读文本文件，`sortSource` 按 FinalShell 那样排序。测试写在 `<来源>_test.go`，编造的样例放在 `testdata/<来源>/`。
 2. 在 `importer.go` 的 `readers` 里加一行，位置就是窗口里列出的位置。
 3. 在 `internal/app/import_sources.go` 的 `importTexts` 里加一项：列表里的名字、选择对话框的标题、文件类型的名字（有扩展名的文件来源）、找不到时说什么、表格上面的提示（加密密码的客户端用 `locales.ImportPasswordsNote(name)`）。新的 `Reason` 或 `Note` 在同一个文件的 `importProblemText` 或 `importNoteText` 里加文案。文案两种语言都要加（见[加一条文案](#加一条文案)）。
 

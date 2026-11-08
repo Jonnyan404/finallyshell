@@ -316,7 +316,10 @@ To add one:
    only for a list the user wrote (it goes to the keychain, never to
    `hosts.json`). What it cannot read is a `Problem` (`NewProblem`,
    `ReadProblem`); with no connection at all, it returns
-   `ErrNoConnections`. `ReadText` reads a text file in whatever encoding
+   `ErrNoConnections`. A `Reason` or `Note` of its own is a constant in
+   this file; a reason for a connection skipped on purpose (not failed)
+   is added to `skipped` in an `init` of this file:
+   `func init() { skipped[Telnet] = true }`. `ReadText` reads a text file in whatever encoding
    it is in, and `sortSource` sorts the result as FinalShell's is. Tests
    go in `<source>_test.go`, made-up samples in `testdata/<source>/`.
 2. One line in `readers`, in `importer.go`, where the window lists it.

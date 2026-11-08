@@ -130,6 +130,10 @@ func TestProblems(t *testing.T) {
 	if !Broken.Failed() || !NoHost.Failed() || !TooLarge.Failed() || !Unreadable.Failed() || NotSSH.Failed() || DeletedThere.Failed() {
 		t.Error("which reasons fail")
 	}
+	// A source's own reason fails unless its init skips it.
+	if !Reason("telnet").Failed() {
+		t.Error("an unknown reason is skipped")
+	}
 
 	src := &Source{
 		Entries: []*Entry{
