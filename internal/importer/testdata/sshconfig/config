@@ -1,0 +1,47 @@
+# A made-up ~/.ssh/config for the importer's tests: documentation
+# addresses, no real keys.
+
+ServerAliveInterval 30
+Include config.d/*.conf
+
+Host web db
+    HostName %h.example.com
+
+Host bastion
+    HostName=bastion.example.com
+    Port = 2222
+    IdentityFile ~/.ssh/id_bastion
+
+Host app
+    hostname 192.0.2.20
+    PROXYJUMP bastion
+    IdentityFile "~/.ssh/keys/my key"
+    IdentityFile ~/.ssh/id_second
+
+Host legacy
+    HostName 192.0.2.30
+    ProxyJump admin@gateway.example.com:2200
+
+Host chain
+    HostName 192.0.2.31
+    ProxyJump gateway.example.com,bastion
+
+Host old-proxy
+    HostName 192.0.2.33
+    ProxyCommand ssh -W %h:%p bastion
+
+Host bad-port
+    HostName 192.0.2.32
+    Port twenty-two
+
+Match host *.internal
+    User nobody
+    HostName 192.0.2.99
+
+Host db
+    User postgres # a comment after the value
+    HostName 192.0.2.98
+
+Host * !bastion
+    User deploy
+    Port 22

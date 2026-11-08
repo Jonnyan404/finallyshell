@@ -5000,6 +5000,128 @@ func (msgs Messages) ImportKeysNote(count int) string {
 	return Catalog.Format(msgs.locale, "importKeysNote", map[string]any{"count": count})
 }
 
+// ImportSourceSSHConfig says "SSH config"
+// in the language the app shows.
+func ImportSourceSSHConfig() string { return In(i18n.Locale()).ImportSourceSSHConfig() }
+
+// ImportSourceSSHConfig says "SSH config"
+// in the language of msgs.
+func (msgs Messages) ImportSourceSSHConfig() string {
+	return Catalog.Format(msgs.locale, "importSourceSSHConfig", nil)
+}
+
+// ChooseSSHConfigFile says "Choose an SSH config file"
+// in the language the app shows.
+func ChooseSSHConfigFile() string { return In(i18n.Locale()).ChooseSSHConfigFile() }
+
+// ChooseSSHConfigFile says "Choose an SSH config file"
+// in the language of msgs.
+func (msgs Messages) ChooseSSHConfigFile() string {
+	return Catalog.Format(msgs.locale, "chooseSSHConfigFile", nil)
+}
+
+// ImportSSHConfigNotFound says "{path} was not found. Choose an SSH config file, OpenSSH's client configuration with Host lines."
+// in the language the app shows.
+func ImportSSHConfigNotFound(path string) string {
+	return In(i18n.Locale()).ImportSSHConfigNotFound(path)
+}
+
+// ImportSSHConfigNotFound says "{path} was not found. Choose an SSH config file, OpenSSH's client configuration with Host lines."
+// in the language of msgs.
+func (msgs Messages) ImportSSHConfigNotFound(path string) string {
+	return Catalog.Format(msgs.locale, "importSSHConfigNotFound", map[string]any{"path": path})
+}
+
+// ImportSSHConfigNote says "An SSH config has no passwords: each is asked for at the first connection. Hosts with an IdentityFile log in with tha…"
+// in the language the app shows.
+func ImportSSHConfigNote() string { return In(i18n.Locale()).ImportSSHConfigNote() }
+
+// ImportSSHConfigNote says "An SSH config has no passwords: each is asked for at the first connection. Hosts with an IdentityFile log in with tha…"
+// in the language of msgs.
+func (msgs Messages) ImportSSHConfigNote() string {
+	return Catalog.Format(msgs.locale, "importSSHConfigNote", nil)
+}
+
+// ProblemSSHMatch says "Match is not supported, skipped"
+// in the language the app shows.
+func ProblemSSHMatch() string { return In(i18n.Locale()).ProblemSSHMatch() }
+
+// ProblemSSHMatch says "Match is not supported, skipped"
+// in the language of msgs.
+func (msgs Messages) ProblemSSHMatch() string {
+	return Catalog.Format(msgs.locale, "problemSSHMatch", nil)
+}
+
+// ProblemSSHPatterns says "patterns only, not a host: its settings go to the hosts it matches"
+// in the language the app shows.
+func ProblemSSHPatterns() string { return In(i18n.Locale()).ProblemSSHPatterns() }
+
+// ProblemSSHPatterns says "patterns only, not a host: its settings go to the hosts it matches"
+// in the language of msgs.
+func (msgs Messages) ProblemSSHPatterns() string {
+	return Catalog.Format(msgs.locale, "problemSSHPatterns", nil)
+}
+
+// ProblemSSHPort says "the port is not a number from 1 to 65535"
+// in the language the app shows.
+func ProblemSSHPort() string { return In(i18n.Locale()).ProblemSSHPort() }
+
+// ProblemSSHPort says "the port is not a number from 1 to 65535"
+// in the language of msgs.
+func (msgs Messages) ProblemSSHPort() string {
+	return Catalog.Format(msgs.locale, "problemSSHPort", nil)
+}
+
+// ProblemSSHLine says "not a valid line"
+// in the language the app shows.
+func ProblemSSHLine() string { return In(i18n.Locale()).ProblemSSHLine() }
+
+// ProblemSSHLine says "not a valid line"
+// in the language of msgs.
+func (msgs Messages) ProblemSSHLine() string {
+	return Catalog.Format(msgs.locale, "problemSSHLine", nil)
+}
+
+// ProblemSSHIncludeLimit says "Include goes past 16 levels or 256 files, not read"
+// in the language the app shows.
+func ProblemSSHIncludeLimit() string { return In(i18n.Locale()).ProblemSSHIncludeLimit() }
+
+// ProblemSSHIncludeLimit says "Include goes past 16 levels or 256 files, not read"
+// in the language of msgs.
+func (msgs Messages) ProblemSSHIncludeLimit() string {
+	return Catalog.Format(msgs.locale, "problemSSHIncludeLimit", nil)
+}
+
+// ImportNoJumpHost says "Jump host not imported"
+// in the language the app shows.
+func ImportNoJumpHost() string { return In(i18n.Locale()).ImportNoJumpHost() }
+
+// ImportNoJumpHost says "Jump host not imported"
+// in the language of msgs.
+func (msgs Messages) ImportNoJumpHost() string {
+	return Catalog.Format(msgs.locale, "importNoJumpHost", nil)
+}
+
+// ImportSSHKeyTokens says "Key path not fully expanded"
+// in the language the app shows.
+func ImportSSHKeyTokens() string { return In(i18n.Locale()).ImportSSHKeyTokens() }
+
+// ImportSSHKeyTokens says "Key path not fully expanded"
+// in the language of msgs.
+func (msgs Messages) ImportSSHKeyTokens() string {
+	return Catalog.Format(msgs.locale, "importSSHKeyTokens", nil)
+}
+
+// ImportJumpHost says "Jump host: {name}"
+// in the language the app shows.
+func ImportJumpHost(name string) string { return In(i18n.Locale()).ImportJumpHost(name) }
+
+// ImportJumpHost says "Jump host: {name}"
+// in the language of msgs.
+func (msgs Messages) ImportJumpHost(name string) string {
+	return Catalog.Format(msgs.locale, "importJumpHost", map[string]any{"name": name})
+}
+
 // DownloadsButton says "Downloads"
 // in the language the app shows.
 func DownloadsButton() string { return In(i18n.Locale()).DownloadsButton() }

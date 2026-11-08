@@ -61,6 +61,7 @@ type Kind string
 // readers are the sources, in the order the import window lists them.
 var readers = []*Reader{
 	finalShellReader,
+	sshConfigReader,
 }
 
 // Reader is what the import window knows of a source.
@@ -134,6 +135,11 @@ type Entry struct {
 	// them (CSV): Import does not put it in the host; the app keeps it
 	// in the system's credential store.
 	Password string
+	// Jump is the entry of the same source this one connects through, as
+	// a jump host (OpenSSH's ProxyJump): nil for none. Import makes the
+	// host of that entry, imported or present already, the host's jump
+	// host; when neither, the host connects directly.
+	Jump *Entry
 }
 
 // FolderLabel is e's folder path, as "Production / Databases".
@@ -324,12 +330,14 @@ func Present(s *config.Store, h *config.Host) *config.Host {
 
 // Import adds the entries' hosts to s, each a copy with an ID, in the
 // folder of its folder path: s's folder of that name in each folder from
-// the top, or a new one. An entry's KeyFile is its host's key; its
+// the top, or a new one. An entry's KeyFile is its host's key, and the
+// host of its Jump, in s once the others are added, its jump host; its
 // Password is not put in the host. Hosts present already, as Present has
 // them, or earlier in entries, are skipped. Each host added is created at
 // at, the time of the import. It returns the hosts added.
 func Import(s *config.Store, entries []*Entry, at time.Time) []*config.Host {
 	var added []*config.Host
+	var from []*Entry // the entry of each host added
 	for _, e := range entries {
 		if Present(s, e.Host) != nil {
 			continue
@@ -346,6 +354,14 @@ func Import(s *config.Store, entries []*Entry, at time.Time) []*config.Host {
 		h.CreatedAt = at
 		s.Add(h)
 		added = append(added, h)
+		from = append(from, e)
+	}
+	for i, h := range added {
+		if j := from[i].Jump; j != nil {
+			if via := Present(s, j.Host); via != nil && via.ID != h.ID {
+				h.Proxy = &config.ProxyConfig{Kind: config.ProxyJump, JumpHost: via.ID}
+			}
+		}
 	}
 	return added
 }

@@ -787,6 +787,32 @@
       }
     }
   },
+  "importSourceSSHConfig": "SSH config",
+  "chooseSSHConfigFile": "Choose an SSH config file",
+  "importSSHConfigNotFound": "{path} was not found. Choose an SSH config file, OpenSSH's client configuration with Host lines.",
+  "@importSSHConfigNotFound": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "importSSHConfigNote": "An SSH config has no passwords: each is asked for at the first connection. Hosts with an IdentityFile log in with that key.",
+  "problemSSHMatch": "Match is not supported, skipped",
+  "problemSSHPatterns": "patterns only, not a host: its settings go to the hosts it matches",
+  "problemSSHPort": "the port is not a number from 1 to 65535",
+  "problemSSHLine": "not a valid line",
+  "problemSSHIncludeLimit": "Include goes past 16 levels or 256 files, not read",
+  "importNoJumpHost": "Jump host not imported",
+  "importSSHKeyTokens": "Key path not fully expanded",
+  "importJumpHost": "Jump host: {name}",
+  "@importJumpHost": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "downloadsButton": "Downloads",
   "downloadFolder": "Download folder",
   "changeFolder": "Change…",

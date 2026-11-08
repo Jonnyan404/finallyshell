@@ -1,6 +1,8 @@
 package app
 
 import (
+	"runtime"
+
 	"finallyshell/internal/importer"
 	"finallyshell/locales"
 )
@@ -36,6 +38,21 @@ var importTexts = map[importer.Kind]importText{
 		notFound: locales.FinalShellNotFound,
 		note:     func() string { return locales.ImportPasswordsNote(locales.ImportSourceFinalShell()) },
 	},
+	importer.SSHConfig: {
+		name:     locales.ImportSourceSSHConfig,
+		choose:   locales.ChooseSSHConfigFile,
+		notFound: func() string { return locales.ImportSSHConfigNotFound(sshConfigPath(runtime.GOOS)) },
+		note:     locales.ImportSSHConfigNote,
+	},
+}
+
+// sshConfigPath is where ssh reads its user's config on goos, as its
+// users write it.
+func sshConfigPath(goos string) string {
+	if goos == "windows" {
+		return `%USERPROFILE%\.ssh\config`
+	}
+	return "~/.ssh/config"
 }
 
 // importSource is a source the window lists: what reads it, and its texts.
@@ -71,6 +88,16 @@ func importProblemText(p importer.Problem, source string) string {
 		return locales.ProblemNotSSH()
 	case importer.DeletedThere:
 		return locales.ProblemDeleted(source)
+	case importer.SSHMatch:
+		return locales.ProblemSSHMatch()
+	case importer.SSHPatternsOnly:
+		return locales.ProblemSSHPatterns()
+	case importer.SSHBadPort:
+		return locales.ProblemSSHPort()
+	case importer.SSHBadLine:
+		return locales.ProblemSSHLine()
+	case importer.SSHIncludeLimit:
+		return locales.ProblemSSHIncludeLimit()
 	}
 	return string(p.Reason)
 }
@@ -80,6 +107,10 @@ func importNoteText(n importer.Note) string {
 	switch n {
 	case importer.ProxyNotImported:
 		return locales.ImportNoProxy()
+	case importer.JumpHostNotImported:
+		return locales.ImportNoJumpHost()
+	case importer.SSHKeyTokens:
+		return locales.ImportSSHKeyTokens()
 	}
 	return string(n)
 }

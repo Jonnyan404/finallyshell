@@ -397,6 +397,9 @@ func (a *App) importTable(c *ui.Context, st *importState, statuses []importStatu
 			if r.e.NeedsKey {
 				notes = append(notes, locales.ImportNeedsKey())
 			}
+			if r.e.Jump != nil {
+				notes = append(notes, locales.ImportJumpHost(r.e.Jump.Host.Title()))
+			}
 			if r.e.Note != "" {
 				notes = append(notes, importNoteText(r.e.Note))
 			}

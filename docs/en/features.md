@@ -13,6 +13,7 @@ supported. [configuration.md](configuration.md) covers the files on disk;
 - [Connection manager](#connection-manager)
 - [Import connections](#import-connections)
   - [From FinalShell](#from-finalshell)
+  - [From an SSH config](#from-an-ssh-config)
 - [Connection editor](#connection-editor)
   - [SSH connection](#ssh-connection)
   - [Terminal](#terminal-page)
@@ -188,8 +189,8 @@ connection manager shows and selects the connection right away.
 
 Import, in the connection manager's toolbar, opens the "Import connections"
 window, a modal window of the connection manager. "Import from" at its top
-chooses where the connections come from. Only FinalShell is in the list
-for now; other clients and lists of servers come later. The window opens
+chooses where the connections come from: the sources below, each in
+its own section. The window opens
 on the source chosen last since Finallyshell started (FinalShell the first
 time).
 
@@ -217,7 +218,8 @@ the selected row.
   in the other client count as skipped. Both are listed below the table,
   each with its file, or its file and line (`file:line`).
 - The Note column says what is not imported of a connection, such as a
-  proxy, or that its key file must be chosen after importing.
+  proxy, or that its key file must be chosen after importing, and the jump
+  host it will connect through.
 
 "Import N" puts the connections into folders that follow the source's
 folder structure. Folders are matched by name level by level from the top:
@@ -280,6 +282,48 @@ LiteShell, MeatShell, OpenFinalShell), summarized in the comments of
 `internal/importer/finalshell.go`. Parsing is lenient: unknown fields are
 ignored, missing ones get defaults (port 22, password authentication), and
 a port written as a string is accepted.
+
+### From an SSH config
+
+OpenSSH's client configuration, `~/.ssh/config` (on Windows,
+`%USERPROFILE%\.ssh\config`), is read when it exists; otherwise, or with
+"Choose file…", any file can be chosen (of any name). It is read as `ssh`
+reads it:
+
+- Each name of a `Host` line is a connection named after it: `Host web db`
+  gives two. Patterns (names with `*`, `?` or `!`) are not connections, but
+  their settings go to the names they match, and lines before the first
+  `Host` go to every name. Each setting comes from the first line that
+  applies, in file order, as in `ssh`: `Host *` with `User deploy` at the
+  end gives every host that user unless it has one of its own.
+- Fields that are imported: `HostName` (`%h` is the name; without it, the
+  host is the name), `Port`, `User` (the local user's name when there is
+  none, as `ssh` uses), the first `IdentityFile` as the private key file,
+  and `ProxyJump`. Keywords are read in any case, as `Key value` or
+  `Key=value`, with values in quotes and `#` comments.
+- In the key file's path, `~` stays as the home folder, and `%d` (the home
+  folder), `%u` (the local user), `%h` (the host), `%r` (the user), `%n`
+  (the name), `%p` (the port) and `%%` are expanded. Other tokens are left
+  as they are, and the Note column says so.
+- A `ProxyJump` to another name of the file makes that connection the jump
+  host, once both are imported (or the jump host is present already); the
+  Note column shows it. A chain (`a,b`) uses its last hop. A jump host that
+  is not a name of the file (`user@host:port`, or a name with no `Host`
+  line), or not imported, is not set: the host connects directly, and the
+  Note column says so. `ProxyCommand` is not imported either, and says so
+  as a proxy.
+- `Include` reads other files in place, with globs; a relative path is in
+  the folder of the file chosen (`~/.ssh`, as `ssh` has it). At most 16
+  levels and 256 files are read.
+- Connections are imported at the top level, with no notes. A host with a
+  key file uses "Private key" authentication with that file; the others
+  use a password, asked for at the first connection (the file has none).
+
+Listed below the table: a `Host` line with patterns only and a `Match`
+block (not supported) as skipped; a `Port` that is not a number from 1 to
+65535 (ignored), a line that does not parse (a quote not closed), and an
+`Include` that cannot be read or goes past the limits as failed. Other
+keywords (`LocalForward`, `CertificateFile` and such) are ignored.
 
 ## Connection editor
 

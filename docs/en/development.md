@@ -149,7 +149,7 @@ tools/release/       release tools: works out the next version, writes the relea
 tools/screenshots/   regenerates the README screenshots in docs/screenshots/ from the internal/app tests
 internal/
   config/            reading and writing hosts and folders (hosts.json) and settings, the background image copy, the config directory; proxy.go is the proxy settings and the jump host chain (finding loops); tunnels.go is the tunnel settings; keys.go is what Backspace and Delete send
-  importer/          reads other clients' connections: importer.go is the list of sources (readers), the entries and problems they read, the text decoder (UTF-8, UTF-16, GB18030), finding duplicates and importing by folder; finalshell.go finds FinalShell's folder and reads the connections and folders in conn; testdata has made-up samples
+  importer/          reads other clients' connections: importer.go is the list of sources (readers), the entries and problems they read, the text decoder (UTF-8, UTF-16, GB18030), finding duplicates and importing by folder; finalshell.go finds FinalShell's folder and reads the connections and folders in conn; sshconfig.go reads OpenSSH's ~/.ssh/config (Host blocks and patterns, Include, ProxyJump); testdata has made-up samples
   sshx/              SSH connection, authentication, known_hosts, the Conn the terminal uses; proxy.go connects through SOCKS5, HTTP CONNECT and jump hosts; forward.go is port forwarding (-L/-R/-D) and the SOCKS5 server
   termenc/           converting a terminal's connection between the server's encoding (GBK, Big5, ...) and the UTF-8 the terminal reads
   sshtest/           in-process SSH server for tests: password login, an empty shell, port forwarding; StartSFTP also serves SFTP (the local file system)
@@ -312,7 +312,8 @@ To add one:
    `Path` read; each connection is an `Entry`: `Host` (no ID, no folder),
    `Folder` (nil for the top level), `File` (`At(file, line)` for a line),
    `KeyFile` for a key file the source names, `NeedsKey` for a key kept in
-   the client's own store, `Note` for a setting not imported, `Password`
+   the client's own store, `Jump` for the entry of its jump host, `Note`
+   for a setting not imported, `Password`
    only for a list the user wrote (it goes to the keychain, never to
    `hosts.json`). What it cannot read is a `Problem` (`NewProblem`,
    `ReadProblem`); with no connection at all, it returns
