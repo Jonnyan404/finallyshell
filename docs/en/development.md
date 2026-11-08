@@ -70,6 +70,14 @@ go test -race ./...
 `go fmt` uses the gofmt of the toolchain in `go.mod`; a `gofmt` on `PATH`
 from another Go version can align comments differently.
 
+Before the tests, CI runs `go run ./tools/natives`, which downloads
+libghostty-vt into the user's cache, trying up to five times (waiting 2,
+4, 8 and 16 seconds), and fails with the last error. GitHub sometimes
+answers the download with 504, and every test that opens a terminal would
+fail. CI keeps the cache's `mygo/natives` folder (`~/.cache/mygo/natives`
+on the Linux runner) between runs, keyed by `go.sum`, so most runs don't
+download it at all.
+
 To look at what the UI tests draw, set `SHOT_DIR` to a folder and the tests
 save their frames there:
 

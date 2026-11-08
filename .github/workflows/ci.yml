@@ -31,4 +31,19 @@ jobs:
           fi
       - run: go vet ./...
       - run: go tool mygo vet
+      # The tests load libghostty-vt, which MyGo's terminal plugin downloads
+      # from GitHub into <os.UserCacheDir()>/mygo/natives/<sha256>/, once
+      # per process. Keep it between runs, keyed by go.sum (the MyGo
+      # version decides the library), and fetch it with retries before the
+      # tests, so that a 504 from GitHub doesn't fail them.
+      - name: natives cache folder
+        id: natives
+        # os.UserCacheDir on Linux: $XDG_CACHE_HOME, else ~/.cache.
+        run: echo "dir=${XDG_CACHE_HOME:-$HOME/.cache}/mygo/natives" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ${{ steps.natives.outputs.dir }}
+          key: mygo-natives-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('go.sum') }}
+      - name: fetch native libraries
+        run: go run ./tools/natives
       - run: go test -race ./...
