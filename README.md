@@ -34,6 +34,7 @@ Download the latest build from [Releases](https://github.com/TooonyChen/finallys
 | System | File |
 |---|---|
 | macOS (Apple silicon) | `finallyshell-<version>-arm64.dmg` |
+| macOS (Intel) | `finallyshell-<version>-amd64.dmg` |
 | Windows (x64) | `finallyshell-setup-<version>-amd64.exe`, or the portable `.zip` |
 | Debian, Ubuntu (x64) | `finallyshell_<version>_amd64.deb` |
 | Other Linux (x64) | `finallyshell-<version>-linux-amd64.tar.gz`; `sh install.sh` installs it in `~/.local` |

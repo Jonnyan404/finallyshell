@@ -34,6 +34,7 @@
 | 系统 | 文件 |
 |---|---|
 | macOS（Apple 芯片） | `finallyshell-<版本>-arm64.dmg` |
+| macOS（Intel 芯片） | `finallyshell-<版本>-amd64.dmg` |
 | Windows（x64） | 安装程序 `finallyshell-setup-<版本>-amd64.exe`，或免安装的 `.zip` |
 | Debian、Ubuntu（x64） | `finallyshell_<版本>_amd64.deb` |
 | 其他 Linux（x64） | `finallyshell-<版本>-linux-amd64.tar.gz`，运行 `sh install.sh` 装到 `~/.local` |

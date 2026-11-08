@@ -52,12 +52,18 @@ jobs:
     needs: [version, gate]
     strategy:
       # A platform that fails doesn't cancel the others: the release job
-      # needs all three, so nothing is published unless all are built.
+      # needs all four, so nothing is published unless all are built.
       fail-fast: false
       matrix:
         include:
           - platform: darwin/arm64
             # Signing (ad hoc) and the disk image need macOS.
+            os: macos-latest
+          - platform: darwin/amd64
+            # Intel Macs, which cannot run an arm64 app at all (Rosetta
+            # translates x86_64 to arm64, never the reverse). Go
+            # cross-compiles the runner's architecture to this one, and MyGo
+            # fetches libghostty-vt-darwin-amd64.dylib for it.
             os: macos-latest
           - platform: linux/amd64
             os: ubuntu-latest
@@ -206,7 +212,7 @@ jobs:
         # Apps read the manifests of the latest release: one missing strands
         # that platform's installed copies at their version.
         run: |
-          for p in darwin-arm64 linux-amd64 windows-amd64; do
+          for p in darwin-arm64 darwin-amd64 linux-amd64 windows-amd64; do
             if [ ! -f "upload/update-$p.json" ]; then
               echo "::error::update-$p.json is missing: installed apps could not update to this release"
               exit 1

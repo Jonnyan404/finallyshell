@@ -3,6 +3,7 @@
 | System | File |
 |---|---|
 | macOS (Apple silicon) | `finallyshell-<version>-arm64.dmg` |
+| macOS (Intel) | `finallyshell-<version>-amd64.dmg` |
 | Windows (x64) | `finallyshell-setup-<version>-amd64.exe`, or the portable `finallyshell-<version>-windows-amd64.zip` |
 | Debian, Ubuntu (x64) | `finallyshell_<version>_amd64.deb` |
 | Other Linux (x64) | `finallyshell-<version>-linux-amd64.tar.gz` with `install.sh`: `sh install.sh` installs it in `~/.local` |
@@ -28,6 +29,7 @@ Finallyshell checks for new versions and updates itself (Options › General ›
 | 系统 | 文件 |
 |---|---|
 | macOS（Apple 芯片） | `finallyshell-<版本>-arm64.dmg` |
+| macOS（Intel 芯片） | `finallyshell-<版本>-amd64.dmg` |
 | Windows（x64） | 安装程序 `finallyshell-setup-<版本>-amd64.exe`，或便携版 `finallyshell-<版本>-windows-amd64.zip` |
 | Debian、Ubuntu（x64） | `finallyshell_<版本>_amd64.deb` |
 | 其他 Linux（x64） | `finallyshell-<版本>-linux-amd64.tar.gz` 和 `install.sh`：运行 `sh install.sh` 装到 `~/.local` |
