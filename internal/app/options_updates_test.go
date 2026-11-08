@@ -73,6 +73,10 @@ func TestUpdatesRowEnabled(t *testing.T) {
 		t.Errorf("no available version; texts %q", tt.Texts())
 	}
 	saveShot(t, tt, "options-updates-available-en.png")
+	tt.SetDark(true)
+	tt.Frame()
+	saveShot(t, tt, "options-updates-available-dark-en.png")
+	tt.SetDark(false)
 
 	p.SetLocale("zh-Hans")
 	tt.Frame()
