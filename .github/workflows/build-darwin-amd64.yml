@@ -1,0 +1,107 @@
+name: build-darwin-amd64
+
+# The upstream release.yml builds darwin/arm64, linux/amd64 and windows/amd64,
+# so there is no macOS Intel package to download. An Intel Mac cannot execute
+# arm64 at all (Rosetta translates x86_64 to arm64, never the reverse), which
+# is the whole reason this workflow exists.
+#
+# The update signature needs upstream's MYGO_UPDATER_PRIVATE_KEY, which a fork
+# does not have. `mygo build` only warns about that ("Not signing an update")
+# and still produces the app and the disk image; installed copies just cannot
+# receive signed updates from this build.
+#
+# The native library this needs (libghostty-vt-darwin-amd64.dylib) is listed in
+# MyGo's plugins/terminal/mygo-plugin.json, so the target is supported.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version written into mygo.json (empty keeps the repository value)'
+        required: false
+        default: ''
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-darwin-amd64.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-latest
+    env:
+      # The ad-hoc signing and the disk image need macOS, the architecture does
+      # need the runner's: Go cross-compiles and MyGo fetches this target's
+      # native library.
+      PLATFORM: darwin/amd64
+      # `mygo build` looks at earlier releases for delta updates.
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Set the version, when one was asked for
+        if: github.event_name == 'workflow_dispatch' && inputs.version != ''
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          jq --arg v "$VERSION_INPUT" '.version = $v' mygo.json > mygo.json.tmp
+          mv mygo.json.tmp mygo.json
+          echo "version: $(jq -r .version mygo.json)"
+
+      - name: Add the licenses
+        # MyGo ships the resources directory inside each app.
+        run: |
+          mkdir -p resources
+          cp LICENSE resources/LICENSE.txt
+          go run ./tools/release licenses > resources/THIRD_PARTY_LICENSES.txt
+
+      # mygo build downloads the target's native libraries from GitHub into
+      # <os.UserCacheDir()>/mygo/natives/<sha256>/. Keep that folder between
+      # runs, keyed by the runner OS, the target and go.sum (the MyGo version
+      # decides the libraries).
+      - name: Natives cache folder
+        id: natives
+        run: |
+          echo "dir=$HOME/Library/Caches/mygo/natives" >> "$GITHUB_OUTPUT"
+          echo "key=mygo-natives-$RUNNER_OS-${PLATFORM/\//-}-${{ hashFiles('go.sum') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the native libraries
+        id: restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ steps.natives.outputs.dir }}
+          key: ${{ steps.natives.outputs.key }}
+
+      - name: Build
+        # Retried for up to ten minutes when a download fails, as GitHub's
+        # release downloads time out or answer 5xx at times.
+        run: .github/scripts/build-with-retries.sh go tool mygo build -platform "$PLATFORM" -o dist
+
+      # Only after a build, which downloaded them all; a failed one would keep
+      # an incomplete folder under the key for good.
+      - name: Save the native libraries
+        if: steps.restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ steps.natives.outputs.dir }}
+          key: ${{ steps.natives.outputs.key }}
+
+      - name: Collect the disk image
+        run: |
+          ls -lh "dist/darwin-amd64"
+          dmg=$(ls dist/darwin-amd64/*.dmg)
+          echo "built: $dmg"
+          shasum -a 256 "$dmg" | tee "dist/darwin-amd64/SHA256SUM.txt"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: finallyshell-darwin-amd64
+          path: |
+            dist/darwin-amd64/*.dmg
+            dist/darwin-amd64/SHA256SUM.txt
+          if-no-files-found: error
