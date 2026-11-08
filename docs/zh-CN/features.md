@@ -168,7 +168,7 @@ Xshell 把每个会话存成一个文件 `<名称>.xsh`，放在它的 `Sessions
 - `文档\NetSarang\Xshell\Sessions`（Xshell 5）。
 - `%APPDATA%\NetSarang\Xshell\Sessions`（更早的版本）。
 
-在 macOS 和 Linux 上，或者 Xshell 的会话存在别处（在它的选项里设置）时，要自己选。可以选 `Sessions` 文件夹、它所在的 `Xshell` 文件夹，或者任何里面有 `.xsh` 文件或 `.xts` 导出文件（Xshell 的“文件”→“导出”）的文件夹：导出文件直接读，不解压，里面的文件夹导入到它所在的文件夹下面。
+在 macOS 和 Linux 上，或者 Xshell 的会话存在别处（在它的选项里设置）时，要自己选。可以选 `Sessions` 文件夹、它所在的 `Xshell` 文件夹，或者任何里面有 `.xsh` 文件或 `.xts` 导出文件（Xshell 的“文件”→“导出”）的文件夹：导出文件直接读，不解压，里面的文件夹导入到它所在的文件夹下面。选择对话框只能选文件夹，所以要导入 `.xts` 文件，就选它所在的文件夹。
 
 导入的字段：名称（文件名去掉 `.xsh`）、主机、端口、用户名、备注（会话的“说明”）、文件夹、认证方法。只导入 SSH 会话；Telnet、Rlogin、串口等会话跳过。
 

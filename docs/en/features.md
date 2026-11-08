@@ -304,7 +304,8 @@ in its options), choose the folder yourself. You can choose the
 `Sessions` folder, the `Xshell` folder it is in, or any folder with
 `.xsh` files or an `.xts` export (File, Export in Xshell) in it: an
 export is read as it is, without extracting it, and its folders are
-imported under the folder it is in.
+imported under the folder it is in. The chooser picks folders only, so to
+import an `.xts` file, choose the folder that holds it.
 
 Fields that are imported: the name (the file's, without `.xsh`), host,
 port, user, notes (the session's Description), folder and authentication
