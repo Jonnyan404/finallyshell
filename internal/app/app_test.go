@@ -40,6 +40,7 @@ type fakePlatform struct {
 	fakeVSIXPicker
 	fakeAppearance
 	*fakeSecrets
+	fakeUpdates
 }
 
 func newFakePlatform(t *testing.T) *fakePlatform {

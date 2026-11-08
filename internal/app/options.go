@@ -148,6 +148,8 @@ func (a *App) generalPage(c *ui.Context) {
 		}
 		widgets.Muted(c, locales.OptionConfirmCloseNote()).FontSize(12).PaddingStart(18)
 	})
+
+	a.updatesSection(c)
 }
 
 // changeSettings changes the settings with fn, saves them and shows the

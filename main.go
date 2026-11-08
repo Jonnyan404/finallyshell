@@ -256,15 +256,11 @@ func main() {
 	// Light, dark or the system's, native title bars included, from the
 	// first frame.
 	mygo.Theme.SetSource(themeSource(settings.Appearance))
-	if runtime.GOOS == "darwin" {
-		// MyGo's default menu bar but its File menu, whose Close Window
-		// takes Cmd+W before the windows: the main one closes the tab with
-		// it, a secondary one itself (openWindow in internal/app).
-		mygo.App.SetMenu(mygo.NewMenu([]*mygo.MenuItem{
-			{Role: mygo.RoleAppMenu}, {Role: mygo.RoleEditMenu}, {Role: mygo.RoleViewMenu}, {Role: mygo.RoleWindowMenu},
-		}))
-	}
+	useUpdater() // updates.go
 	mygo.App.WhenReady(func() {
+		if runtime.GOOS == "darwin" {
+			setAppMenu() // once the app knows its language
+		}
 		plat := &platform{windows: map[app.WindowKind]*childWindow{}}
 		a := app.New(plat)
 		a.NewTab() // it starts on the start page
@@ -304,7 +300,13 @@ func main() {
 			}
 		})
 		mygo.App.OnSecondInstance(func([]string, string) { plat.raise() })
-		mygo.App.OnLocaleChanged(func(string) { plat.retitle() })
+		mygo.App.OnLocaleChanged(func(string) {
+			plat.retitle()
+			if runtime.GOOS == "darwin" {
+				setAppMenu() // its Check for Updates… in the new language
+			}
+		})
+		plat.watchUpdates()
 	})
 	if err := mygo.App.Run(); err != nil {
 		log.Fatal(err)

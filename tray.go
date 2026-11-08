@@ -12,13 +12,14 @@ import (
 	"finallyshell/locales"
 
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/plugins/updater"
 	"github.com/egoist/mygo/ui"
 )
 
 // HideToTray hides the main window behind a tray icon, which is there
-// only while the window is hidden: its menu shows the window again or
-// quits. On macOS the Dock icon stays, and clicking it shows the window
-// too (OnActivate in main).
+// only while the window is hidden: its menu shows the window again,
+// checks for updates or quits. On macOS the Dock icon stays, and clicking
+// it shows the window too (OnActivate in main).
 func (p *platform) HideToTray() bool {
 	if p.tray == nil {
 		tray, err := mygo.NewTray(mygo.TrayOptions{
@@ -28,6 +29,7 @@ func (p *platform) HideToTray() bool {
 			ToolTip:        locales.AppTitle(),
 			Menu: mygo.NewMenu([]*mygo.MenuItem{
 				{Label: locales.TrayShow(), Click: func(*mygo.MenuItem, *mygo.Window) { p.showMain() }},
+				updater.MenuItem(), // its window says why when this copy cannot update
 				mygo.Separator(),
 				{Label: locales.TrayQuit(), Click: func(*mygo.MenuItem, *mygo.Window) { p.Quit() }},
 			}),

@@ -4,5 +4,9 @@
   "icon": "resources/icon.png",
   "version": "0.2.0",
   "out": "build",
-  "i18n": { "dir": "locales", "source": "en" }
+  "i18n": { "dir": "locales", "source": "en" },
+  "updates": {
+    "publicKey": "fwcqse2POLiSdWytl0BHeURrztxcDObwmos+4IlTqHQ=",
+    "github": "TooonyChen/finallyshell"
+  }
 }

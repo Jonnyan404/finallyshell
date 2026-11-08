@@ -3998,6 +3998,98 @@ func (msgs Messages) TrayQuit() string {
 	return Catalog.Format(msgs.locale, "trayQuit", nil)
 }
 
+// OptionsUpdates says "Updates"
+// in the language the app shows.
+func OptionsUpdates() string { return In(i18n.Locale()).OptionsUpdates() }
+
+// OptionsUpdates says "Updates"
+// in the language of msgs.
+func (msgs Messages) OptionsUpdates() string {
+	return Catalog.Format(msgs.locale, "optionsUpdates", nil)
+}
+
+// UpdatesVersion says "Current version: {version}"
+// in the language the app shows.
+func UpdatesVersion(version string) string { return In(i18n.Locale()).UpdatesVersion(version) }
+
+// UpdatesVersion says "Current version: {version}"
+// in the language of msgs.
+func (msgs Messages) UpdatesVersion(version string) string {
+	return Catalog.Format(msgs.locale, "updatesVersion", map[string]any{"version": version})
+}
+
+// UpdatesVersionDevelopment says "Current version: development build"
+// in the language the app shows.
+func UpdatesVersionDevelopment() string { return In(i18n.Locale()).UpdatesVersionDevelopment() }
+
+// UpdatesVersionDevelopment says "Current version: development build"
+// in the language of msgs.
+func (msgs Messages) UpdatesVersionDevelopment() string {
+	return Catalog.Format(msgs.locale, "updatesVersionDevelopment", nil)
+}
+
+// CheckForUpdates says "Check for Updates…"
+// in the language the app shows.
+func CheckForUpdates() string { return In(i18n.Locale()).CheckForUpdates() }
+
+// CheckForUpdates says "Check for Updates…"
+// in the language of msgs.
+func (msgs Messages) CheckForUpdates() string {
+	return Catalog.Format(msgs.locale, "checkForUpdates", nil)
+}
+
+// UpdatesAvailable says "Version {version} is available"
+// in the language the app shows.
+func UpdatesAvailable(version string) string { return In(i18n.Locale()).UpdatesAvailable(version) }
+
+// UpdatesAvailable says "Version {version} is available"
+// in the language of msgs.
+func (msgs Messages) UpdatesAvailable(version string) string {
+	return Catalog.Format(msgs.locale, "updatesAvailable", map[string]any{"version": version})
+}
+
+// OptionCheckUpdatesAutomatically says "Check for updates automatically"
+// in the language the app shows.
+func OptionCheckUpdatesAutomatically() string {
+	return In(i18n.Locale()).OptionCheckUpdatesAutomatically()
+}
+
+// OptionCheckUpdatesAutomatically says "Check for updates automatically"
+// in the language of msgs.
+func (msgs Messages) OptionCheckUpdatesAutomatically() string {
+	return Catalog.Format(msgs.locale, "optionCheckUpdatesAutomatically", nil)
+}
+
+// UpdatesDevelopment says "Development builds don't update themselves."
+// in the language the app shows.
+func UpdatesDevelopment() string { return In(i18n.Locale()).UpdatesDevelopment() }
+
+// UpdatesDevelopment says "Development builds don't update themselves."
+// in the language of msgs.
+func (msgs Messages) UpdatesDevelopment() string {
+	return Catalog.Format(msgs.locale, "updatesDevelopment", nil)
+}
+
+// UpdatesManaged says "This copy can't update itself where it is installed. If a package manager installed it (the .deb package), update it …"
+// in the language the app shows.
+func UpdatesManaged() string { return In(i18n.Locale()).UpdatesManaged() }
+
+// UpdatesManaged says "This copy can't update itself where it is installed. If a package manager installed it (the .deb package), update it …"
+// in the language of msgs.
+func (msgs Messages) UpdatesManaged() string {
+	return Catalog.Format(msgs.locale, "updatesManaged", nil)
+}
+
+// UpdatesReleasesPage says "Releases page"
+// in the language the app shows.
+func UpdatesReleasesPage() string { return In(i18n.Locale()).UpdatesReleasesPage() }
+
+// UpdatesReleasesPage says "Releases page"
+// in the language of msgs.
+func (msgs Messages) UpdatesReleasesPage() string {
+	return Catalog.Format(msgs.locale, "updatesReleasesPage", nil)
+}
+
 // ScTerminalCopy says "Terminal: copy"
 // in the language the app shows.
 func ScTerminalCopy() string { return In(i18n.Locale()).ScTerminalCopy() }

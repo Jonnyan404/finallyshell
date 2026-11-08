@@ -532,6 +532,31 @@
   "editorConflictBody": "It changed after you opened it. Overwrite it with your text, or reload it from the server? Undo brings your text back after a reload.",
   "trayShow": "Show Finallyshell",
   "trayQuit": "Quit",
+  "optionsUpdates": "Updates",
+  "updatesVersion": "Current version: {version}",
+  "@updatesVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "0.3.0"
+      }
+    }
+  },
+  "updatesVersionDevelopment": "Current version: development build",
+  "checkForUpdates": "Check for Updates…",
+  "updatesAvailable": "Version {version} is available",
+  "@updatesAvailable": {
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "0.3.0"
+      }
+    }
+  },
+  "optionCheckUpdatesAutomatically": "Check for updates automatically",
+  "updatesDevelopment": "Development builds don't update themselves.",
+  "updatesManaged": "This copy can't update itself where it is installed. If a package manager installed it (the .deb package), update it there, or download the new version from the releases page.",
+  "updatesReleasesPage": "Releases page",
   "scTerminalCopy": "Terminal: copy",
   "scTerminalPaste": "Terminal: paste",
   "scTerminalFind": "Terminal: find",

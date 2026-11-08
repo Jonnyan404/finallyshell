@@ -112,6 +112,17 @@ type Platform interface {
 	SecretGet(key string) (value string, ok bool, err error)
 	SecretSet(key, value string) error
 	SecretDelete(key string) error
+
+	// Updates reports what the updater knows now (options_updates.go). It
+	// is cheap: views call it as they draw. When it changes, as a check
+	// finds a version, the platform calls Redraw.
+	Updates() UpdateStatus
+	// CheckForUpdates checks as the user asked: the update window shows
+	// at once. It returns without waiting.
+	CheckForUpdates()
+	// SetAutomaticUpdateChecks turns checking in the background on or off,
+	// and keeps the choice.
+	SetAutomaticUpdateChecks(on bool)
 }
 
 // App is the state of the window.
