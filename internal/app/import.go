@@ -241,6 +241,11 @@ func (a *App) importView(c *ui.Context) {
 					widgets.Muted(c, locales.ImportLooking())
 				case st.err != nil:
 					ui.Text(c, a.importError(st)).TextColor(theme.Danger).TextAlign(ui.Center).MaxWidth(520)
+					if st.path == "" { // the chooser failed: the top row has no button
+						if ui.PrimaryButton(c, st.chooseLabel()).Clicked() {
+							a.readImport(st, true)
+						}
+					}
 				case st.notFound:
 					ui.Text(c, st.source.notFound()).TextAlign(ui.Center).MaxWidth(520)
 					if ui.PrimaryButton(c, st.chooseLabel()).Clicked() {

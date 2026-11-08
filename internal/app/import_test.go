@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -24,6 +25,7 @@ type fakeFolderPicker struct {
 	folderMu    sync.Mutex
 	folder      string
 	folderAsked []filePick
+	folderErr   error // what the dialogs fail with
 	file        string
 	fileAsked   []typedPick
 }
@@ -39,7 +41,17 @@ func (p *fakeFolderPicker) OpenFileOfType(parent WindowKind, title, typeName str
 	p.folderMu.Lock()
 	defer p.folderMu.Unlock()
 	p.fileAsked = append(p.fileAsked, typedPick{filePick{parent: parent, title: title}, typeName, extensions})
+	if p.folderErr != nil {
+		return "", p.folderErr
+	}
 	return p.file, nil
+}
+
+// failPicks makes the next dialogs fail with err, nil for none.
+func (p *fakeFolderPicker) failPicks(err error) {
+	p.folderMu.Lock()
+	p.folderErr = err
+	p.folderMu.Unlock()
 }
 
 // pickTyped is what the next dialogs for a file of a type return: "" for
@@ -71,6 +83,9 @@ func (p *fakeFolderPicker) OpenFolder(parent WindowKind, title string) (string, 
 	p.folderMu.Lock()
 	defer p.folderMu.Unlock()
 	p.folderAsked = append(p.folderAsked, filePick{parent: parent, title: title})
+	if p.folderErr != nil {
+		return "", p.folderErr
+	}
 	return p.folder, nil
 }
 
@@ -245,6 +260,15 @@ func TestImportFinalShell(t *testing.T) {
 	}
 	saveShot(t, tt, "import-zh.png")
 	sourcesShot(t, tt, "import-sources-zh.png")
+	tt.SetDark(true)
+	tt.Frame()
+	if theme != darkTheme {
+		t.Error("not dark")
+	}
+	saveShot(t, tt, "import-dark-zh.png")
+	sourcesShot(t, tt, "import-sources-dark-zh.png")
+	tt.SetDark(false)
+	tt.Frame()
 	p.SetLocale("")
 	tt.Frame()
 
@@ -397,6 +421,44 @@ func TestImportChooseFolder(t *testing.T) {
 	}
 	if len(a.hosts.Live()) != 2 || a.folderLabel(a.hosts.Live()[1].Folder) != "Staging / Web" {
 		t.Errorf("hosts %+v", a.hosts.Live())
+	}
+}
+
+// When the chooser itself fails, the window says so and offers it again.
+func TestImportChooserFails(t *testing.T) {
+	a, p := testApp(t)
+	findFinalShell(a, func() string { return "" })
+	p.failPicks(errors.New("no portal"))
+	_, tt := openImport(t, a, p)
+	if !tt.HasText(locales.ImportReadFailed("no portal")) || a.imp.path != "" {
+		t.Fatalf("texts %q", tt.Texts())
+	}
+	p.failPicks(nil)
+	p.pickFolder(finalShellSample(t, "finalshell"))
+	if err := tt.Click(locales.ChooseFolder()); err != nil {
+		t.Fatalf("no chooser: %v; texts %q", err, tt.Texts())
+	}
+	p.until(t, "the folder read", func() bool { return !a.imp.busy && a.imp.src != nil })
+	tt.Frame()
+	if !tt.HasText("web-1") || a.imp.err != nil {
+		t.Errorf("texts %q", tt.Texts())
+	}
+
+	// A file source too, after a canceled source switch.
+	addListSource(a)
+	p.failPicks(errors.New("no portal"))
+	choose(t, tt, locales.ImportFrom(), "Server list")
+	p.until(t, "the chooser", func() bool { return !a.imp.busy })
+	tt.Frame()
+	p.failPicks(nil)
+	p.pickTyped(filepath.Join(t.TempDir(), "servers.csv"))
+	if err := tt.Click(locales.ChooseFile()); err != nil {
+		t.Fatalf("no chooser: %v; texts %q", err, tt.Texts())
+	}
+	p.until(t, "the list read", func() bool { return !a.imp.busy && a.imp.src != nil })
+	tt.Frame()
+	if !tt.HasText("app-1") {
+		t.Errorf("texts %q", tt.Texts())
 	}
 }
 
