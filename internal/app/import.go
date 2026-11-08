@@ -397,8 +397,12 @@ func (a *App) importTable(c *ui.Context, st *importState, statuses []importStatu
 			if r.e.NeedsKey {
 				notes = append(notes, locales.ImportNeedsKey())
 			}
-			if r.e.Jump != nil {
-				notes = append(notes, locales.ImportJumpHost(r.e.Jump.Host.Title()))
+			if j := r.e.Jump; j != nil {
+				if st.jumpImported(j, statuses, a.hosts) {
+					notes = append(notes, locales.ImportJumpHost(j.Host.Title()))
+				} else {
+					notes = append(notes, importNoteText(importer.JumpHostNotImported))
+				}
 			}
 			if r.e.Note != "" {
 				notes = append(notes, importNoteText(r.e.Note))
@@ -416,6 +420,21 @@ func (a *App) importTable(c *ui.Context, st *importState, statuses []importStatu
 		(table.Submitted() || st.list.Shortcut(c, 0, ui.KeySpace)) {
 		st.rows[st.row].checked = !st.rows[st.row].checked
 	}
+}
+
+// jumpImported tells whether j, the Jump of an entry, will be a host of
+// hosts once the rows chosen are imported, as importer.Import has it: one
+// present already, or a row chosen that reaches the same target.
+func (st *importState) jumpImported(j *importer.Entry, statuses []importStatus, hosts *config.Store) bool {
+	if importer.Present(hosts, j.Host) != nil {
+		return true
+	}
+	for i, r := range st.rows {
+		if r.checked && !statuses[i].skipped() && importer.SameTarget(r.e.Host, j.Host) {
+			return true
+		}
+	}
+	return false
 }
 
 // importProblems lists the files, or lines, not imported from, and why.

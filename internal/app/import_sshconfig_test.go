@@ -9,6 +9,8 @@ import (
 	"finallyshell/internal/config"
 	"finallyshell/internal/importer"
 	"finallyshell/locales"
+
+	"github.com/egoist/mygo/ui"
 )
 
 // findSSHConfig makes find what looks for ~/.ssh/config.
@@ -136,5 +138,99 @@ func TestImportSSHConfigChooseFile(t *testing.T) {
 	}
 	if sshConfigPath("windows") != `%USERPROFILE%\.ssh\config` || sshConfigPath("darwin") != "~/.ssh/config" {
 		t.Error(sshConfigPath("windows"))
+	}
+}
+
+// openSSHSample opens the import window of a new app on the importer's
+// sample SSH config, with the hosts present.
+func openSSHSample(t *testing.T, present ...*config.Host) (*App, *fakePlatform, *ui.Tester) {
+	t.Helper()
+	a, p := testApp(t)
+	sample, err := filepath.Abs(filepath.Join("..", "importer", "testdata", "sshconfig", "config"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	findSSHConfig(a, func() string { return sample })
+	a.importKind = importer.SSHConfig
+	for _, h := range present {
+		a.hosts.Add(h)
+	}
+	_, tt := openImport(t, a, p)
+	return a, p, tt
+}
+
+// countText is how many texts of tt are s.
+func countText(tt *ui.Tester, s string) int {
+	n := 0
+	for _, x := range tt.Texts() {
+		if x == s {
+			n++
+		}
+	}
+	return n
+}
+
+// The note of a host with a jump host follows the rows chosen: the jump
+// host's name while its row is checked, or it is present, "not imported"
+// otherwise, and the host then imports without it.
+func TestImportSSHConfigJumpUnchecked(t *testing.T) {
+	a, _, tt := openSSHSample(t)
+	// app and chain go through bastion; legacy's jump host is never
+	// imported.
+	via, none := locales.ImportJumpHost("bastion"), locales.ImportNoJumpHost()
+	toggle := func() {
+		t.Helper()
+		box := importBox(t, tt, "bastion")
+		tt.ClickAt(box.Bounds.X+box.Bounds.W/2, box.Bounds.Y+box.Bounds.H/2)
+		tt.Frame()
+	}
+	if countText(tt, via) != 2 || countText(tt, none) != 1 {
+		t.Fatalf("checked: texts %q", tt.Texts())
+	}
+	toggle()
+	if importBox(t, tt, "bastion").Checked || countText(tt, via) != 0 || countText(tt, none) != 3 {
+		t.Fatalf("unchecked: texts %q", tt.Texts())
+	}
+	toggle()
+	if !importBox(t, tt, "bastion").Checked || countText(tt, via) != 2 || countText(tt, none) != 1 {
+		t.Fatalf("checked again: texts %q", tt.Texts())
+	}
+	toggle()
+	if err := tt.Click(locales.ImportCount(10)); err != nil {
+		t.Fatalf("%v; texts %q", err, tt.Texts())
+	}
+	if len(a.hosts.Live()) != 10 {
+		t.Errorf("%d hosts", len(a.hosts.Live()))
+	}
+	for _, h := range a.hosts.Live() {
+		if h.Name == "bastion" || h.Proxy != nil {
+			t.Errorf("%s imported, proxy %+v", h.Name, h.Proxy)
+		}
+	}
+
+	// bastion present already, the same address, port and user: its row is
+	// skipped, the note names the jump host, and the hosts go through it.
+	user := ""
+	src, err := importer.ReaderOf(importer.SSHConfig).Read(filepath.Join("..", "importer", "testdata", "sshconfig", "config"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range src.Entries {
+		if e.Host.Name == "bastion" {
+			user = e.Host.User // the local user's name
+		}
+	}
+	mine := &config.Host{ID: "mine", Name: "my bastion", Addr: "bastion.example.com", Port: 2222, User: user, Auth: config.AuthPassword}
+	a, _, tt = openSSHSample(t, mine)
+	if countText(tt, via) != 2 || !tt.HasText(locales.ImportPresent("my bastion")) {
+		t.Fatalf("present: texts %q", tt.Texts())
+	}
+	if err := tt.Click(locales.ImportCount(10)); err != nil {
+		t.Fatalf("%v; texts %q", err, tt.Texts())
+	}
+	for _, h := range a.hosts.Live() {
+		if (h.Name == "app" || h.Name == "chain") && (h.Proxy == nil || h.Proxy.JumpHost != "mine") {
+			t.Errorf("%s proxy %+v", h.Name, h.Proxy)
+		}
 	}
 }

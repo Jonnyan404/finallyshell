@@ -310,8 +310,9 @@ reads it:
   Note column shows it. A chain (`a,b`) uses its last hop. A jump host that
   is not a name of the file (`user@host:port`, or a name with no `Host`
   line), or not imported, is not set: the host connects directly, and the
-  Note column says so. `ProxyCommand` is not imported either, and says so
-  as a proxy.
+  Note column says so. The note follows the checkboxes: unchecking the
+  jump host changes it at once on the hosts that go through it.
+  `ProxyCommand` is not imported either, and says so as a proxy.
 - `Include` reads other files in place, with globs; a relative path is in
   the folder of the file chosen (`~/.ssh`, as `ssh` has it). At most 16
   levels and 256 files are read.
