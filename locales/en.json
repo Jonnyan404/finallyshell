@@ -845,5 +845,57 @@
       }
     }
   },
-  "fileIconsThemes": "Themes"
+  "fileIconsThemes": "Themes",
+  "newFile": "New file",
+  "openFolder": "Open",
+  "renameFileTitle": "Rename “{name}”",
+  "@renameFileTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFileTitle": "Delete “{name}”?",
+  "@deleteFileTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFilesTitle": "{count, plural, one {Delete # item?} other {Delete # items?}}",
+  "@deleteFilesTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteFilesBody": "{count, plural, one {It is deleted on the server. This can't be undone.} other {They are deleted on the server. This can't be undone.}}",
+  "@deleteFilesBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteFoldersBody": "{count, plural, one {It is deleted on the server with everything in it. This can't be undone.} other {They are deleted on the server, folders with everything in them. This can't be undone.}}",
+  "@deleteFoldersBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deletingFiles": "Deleting…",
+  "badFileName": "That name can't be used.",
+  "fileNameTaken": "“{name}” already exists.",
+  "@fileNameTaken": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }

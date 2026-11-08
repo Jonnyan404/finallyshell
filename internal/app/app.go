@@ -171,6 +171,8 @@ type App struct {
 
 	// The question before replacing files.
 	replace *replaceQuestion
+	// The file panel's dialog: a rename, a new folder or file, a delete.
+	fileDlg *fileDialog
 
 	// The System info popover, and what reads it (readSysInfo when nil).
 	sysInfo     sysInfoPopover

@@ -17,6 +17,14 @@ func (a *App) dialogs(c *ui.Context) {
 			s.hostKeyQ = nil
 		}
 	}
+	if d := a.fileDlg; d != nil {
+		open := true
+		ui.Modal(c, &open, func() { a.fileDialogView(c, d) })
+		// Closed, or its session is gone.
+		if !open || d.sess.sftp == nil {
+			a.closeFileDialog(d)
+		}
+	}
 	if q := a.replace; q != nil {
 		open := true
 		ui.Modal(c, &open, func() { a.replaceView(c, q) })

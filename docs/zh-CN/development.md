@@ -110,7 +110,7 @@ internal/
   termenc/           终端的连接在服务器的编码（GBK、Big5……）和终端读的 UTF-8 之间转换
   sshtest/           测试用的进程内 SSH 服务器：密码登录、空的 shell、端口转发，StartSFTP 还提供 SFTP（本机文件系统）
   monitor/           服务器状态采集和解析
-  remotefs/          SFTP 列目录、上传、下载（带进度和取消）；textfile.go 是编辑器的读取（认出二进制文件）和安全保存
+  remotefs/          SFTP 列目录、上传、下载（带进度和取消），重命名、新建、删除（ops.go）；textfile.go 是编辑器的读取（认出二进制文件）和安全保存
   icons/             内嵌的 SVG 图标（Lucide，ISC 协议）
   fileicons/         VS Code 文件图标主题：读 VSIX 和扩展目录、按名字找图标、字体转换、安装和查找已装的主题；bundled/ 是内置的 Material 和 Seti，languages_gen.go 是 VS Code 的语言表，internal/gen 生成它们
   widgets/           可复用的小控件：图标按钮、用量条、折线图、表单行、左侧导航加页面（nav.go）
@@ -125,6 +125,7 @@ internal/
     start.go         新标签页：快速连接、搜索、清空最近连接
     splits.go        分隔条：各区域的最小尺寸，大小的保存和恢复
     files.go         文件面板：目录树、文件表格、拖入上传
+    fileops.go       重命名、删除、新建文件夹和文件：对话框和目录树的右键菜单
     fileicons.go     文件面板的图标主题：后台读取、显示图标、安装和删除
     options_fileicons.go “文件管理 › 文件图标主题”页
     transfers.go     传输队列、“传输”页，和两处共用的传输行 transferRow

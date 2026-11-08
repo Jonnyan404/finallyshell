@@ -153,7 +153,7 @@ internal/
   termenc/           converting a terminal's connection between the server's encoding (GBK, Big5, ...) and the UTF-8 the terminal reads
   sshtest/           in-process SSH server for tests: password login, an empty shell, port forwarding; StartSFTP also serves SFTP (the local file system)
   monitor/           collecting and parsing server status
-  remotefs/          SFTP listing, upload, download (with progress and cancel); textfile.go is the editor's reading (detecting binary files) and safe saving
+  remotefs/          SFTP listing, upload, download (with progress and cancel), rename, mkdir, create and delete (ops.go); textfile.go is the editor's reading (detecting binary files) and safe saving
   icons/             embedded SVG icons (Lucide, ISC license)
   fileicons/         VS Code file icon themes: reading VSIX files and extension folders, finding icons by name, font conversion, installing and finding installed themes; bundled/ has the built-in Material and Seti, languages_gen.go is VS Code's language table, internal/gen generates them
   widgets/           small reusable widgets: icon buttons, usage bars, line charts, form rows, side navigation with pages (nav.go)
@@ -168,6 +168,7 @@ internal/
     start.go         new tab: quick connect, search, clearing recent connections
     splits.go        split dividers: minimum sizes of the areas, saving and restoring sizes
     files.go         file panel: folder tree, file table, drop to upload
+    fileops.go       rename, delete, new folder and file: their dialog and the tree's menu
     fileicons.go     icon themes in the file panel: background loading, showing icons, installing and removing
     options_fileicons.go the File manager › File icon theme page
     transfers.go     transfer queue, the Transfers tab, and transferRow shared by both places

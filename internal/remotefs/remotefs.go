@@ -1,4 +1,5 @@
-// Package remotefs lists, uploads and downloads files over SFTP.
+// Package remotefs lists, uploads, downloads, renames, creates and
+// deletes files over SFTP.
 package remotefs
 
 import (

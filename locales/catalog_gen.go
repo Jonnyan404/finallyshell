@@ -5313,3 +5313,103 @@ func FileIconsThemes() string { return In(i18n.Locale()).FileIconsThemes() }
 func (msgs Messages) FileIconsThemes() string {
 	return Catalog.Format(msgs.locale, "fileIconsThemes", nil)
 }
+
+// NewFile says "New file"
+// in the language the app shows.
+func NewFile() string { return In(i18n.Locale()).NewFile() }
+
+// NewFile says "New file"
+// in the language of msgs.
+func (msgs Messages) NewFile() string {
+	return Catalog.Format(msgs.locale, "newFile", nil)
+}
+
+// OpenFolder says "Open"
+// in the language the app shows.
+func OpenFolder() string { return In(i18n.Locale()).OpenFolder() }
+
+// OpenFolder says "Open"
+// in the language of msgs.
+func (msgs Messages) OpenFolder() string {
+	return Catalog.Format(msgs.locale, "openFolder", nil)
+}
+
+// RenameFileTitle says "Rename “{name}”"
+// in the language the app shows.
+func RenameFileTitle(name string) string { return In(i18n.Locale()).RenameFileTitle(name) }
+
+// RenameFileTitle says "Rename “{name}”"
+// in the language of msgs.
+func (msgs Messages) RenameFileTitle(name string) string {
+	return Catalog.Format(msgs.locale, "renameFileTitle", map[string]any{"name": name})
+}
+
+// DeleteFileTitle says "Delete “{name}”?"
+// in the language the app shows.
+func DeleteFileTitle(name string) string { return In(i18n.Locale()).DeleteFileTitle(name) }
+
+// DeleteFileTitle says "Delete “{name}”?"
+// in the language of msgs.
+func (msgs Messages) DeleteFileTitle(name string) string {
+	return Catalog.Format(msgs.locale, "deleteFileTitle", map[string]any{"name": name})
+}
+
+// DeleteFilesTitle says "{count, plural, one {Delete # item?} other {Delete # items?}}"
+// in the language the app shows.
+func DeleteFilesTitle(count int) string { return In(i18n.Locale()).DeleteFilesTitle(count) }
+
+// DeleteFilesTitle says "{count, plural, one {Delete # item?} other {Delete # items?}}"
+// in the language of msgs.
+func (msgs Messages) DeleteFilesTitle(count int) string {
+	return Catalog.Format(msgs.locale, "deleteFilesTitle", map[string]any{"count": count})
+}
+
+// DeleteFilesBody says "{count, plural, one {It is deleted on the server. This can't be undone.} other {They are deleted on the server. This …"
+// in the language the app shows.
+func DeleteFilesBody(count int) string { return In(i18n.Locale()).DeleteFilesBody(count) }
+
+// DeleteFilesBody says "{count, plural, one {It is deleted on the server. This can't be undone.} other {They are deleted on the server. This …"
+// in the language of msgs.
+func (msgs Messages) DeleteFilesBody(count int) string {
+	return Catalog.Format(msgs.locale, "deleteFilesBody", map[string]any{"count": count})
+}
+
+// DeleteFoldersBody says "{count, plural, one {It is deleted on the server with everything in it. This can't be undone.} other {They are delete…"
+// in the language the app shows.
+func DeleteFoldersBody(count int) string { return In(i18n.Locale()).DeleteFoldersBody(count) }
+
+// DeleteFoldersBody says "{count, plural, one {It is deleted on the server with everything in it. This can't be undone.} other {They are delete…"
+// in the language of msgs.
+func (msgs Messages) DeleteFoldersBody(count int) string {
+	return Catalog.Format(msgs.locale, "deleteFoldersBody", map[string]any{"count": count})
+}
+
+// DeletingFiles says "Deleting…"
+// in the language the app shows.
+func DeletingFiles() string { return In(i18n.Locale()).DeletingFiles() }
+
+// DeletingFiles says "Deleting…"
+// in the language of msgs.
+func (msgs Messages) DeletingFiles() string {
+	return Catalog.Format(msgs.locale, "deletingFiles", nil)
+}
+
+// BadFileName says "That name can't be used."
+// in the language the app shows.
+func BadFileName() string { return In(i18n.Locale()).BadFileName() }
+
+// BadFileName says "That name can't be used."
+// in the language of msgs.
+func (msgs Messages) BadFileName() string {
+	return Catalog.Format(msgs.locale, "badFileName", nil)
+}
+
+// FileNameTaken says "“{name}” already exists."
+// in the language the app shows.
+func FileNameTaken(name string) string { return In(i18n.Locale()).FileNameTaken(name) }
+
+// FileNameTaken says "“{name}” already exists."
+// in the language of msgs.
+func (msgs Messages) FileNameTaken(name string) string {
+	return Catalog.Format(msgs.locale, "fileNameTaken", map[string]any{"name": name})
+}

@@ -171,11 +171,12 @@ func (a *App) download(s *Session, names []string, dir string) {
 	start()
 }
 
-func (a *App) pickAndUpload(s *Session, folder bool) {
-	if s.sftp == nil || s.files.cwd == "" {
+// pickAndUpload uploads files, or a folder, the user chooses into the
+// remote folder dir.
+func (a *App) pickAndUpload(s *Session, dir string, folder bool) {
+	if s.sftp == nil || dir == "" {
 		return
 	}
-	dir := s.files.cwd
 	title := locales.ChooseUploadFiles()
 	if folder {
 		title = locales.ChooseUploadFolder()

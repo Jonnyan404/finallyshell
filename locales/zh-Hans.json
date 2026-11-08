@@ -521,5 +521,15 @@
   "vsixNoIconTheme": "这个扩展没有文件图标主题。",
   "vsixTooLarge": "VSIX 扩展包超过 50 MB。",
   "vsixInstallFailed": "安装失败：{error}",
-  "fileIconsThemes": "主题"
+  "fileIconsThemes": "主题",
+  "newFile": "新建文件",
+  "openFolder": "打开",
+  "renameFileTitle": "重命名“{name}”",
+  "deleteFileTitle": "删除“{name}”？",
+  "deleteFilesTitle": "删除 {count} 个项目？",
+  "deleteFilesBody": "{count, plural, =1 {将从服务器上删除，无法撤销。} other {这 # 项将从服务器上删除，无法撤销。}}",
+  "deleteFoldersBody": "{count, plural, =1 {这个文件夹将连同其中的所有内容一起从服务器上删除，无法撤销。} other {这 # 项将从服务器上删除，文件夹连同其中的所有内容一起删除，无法撤销。}}",
+  "deletingFiles": "正在删除…",
+  "badFileName": "不能使用这个名称。",
+  "fileNameTaken": "“{name}”已存在。"
 }

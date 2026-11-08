@@ -26,6 +26,7 @@ supported. [configuration.md](configuration.md) covers the files on disk;
 - [File panel](#file-panel)
   - [File icon themes](#file-icon-themes)
   - [Symbolic links](#symbolic-links)
+  - [File operations](#file-operations)
   - [Upload and download](#upload-and-download)
   - [Transfers tab](#transfers-tab)
   - [Downloads popover](#downloads-popover)
@@ -571,6 +572,39 @@ written, relative or absolute, not resolved.
   (each needs two round trips, `readlink` and `stat`), so folders with many
   links (such as `/usr/lib64`) do not wait for them one by one.
 - The folder tree on the left shows no arrows.
+
+### File operations
+
+Files and folders can be renamed, deleted and created from the context
+menus of the file table and of the folder tree:
+
+- The file table's menu has New folder, New file, Rename (one item
+  chosen) and Delete (one or more chosen). With the table focused, F2
+  renames the chosen item and Delete (or Cmd+Backspace on macOS) deletes
+  the chosen items.
+- The folder tree's menu acts on the folder right-clicked, without
+  opening it: Open, Upload files, Upload folder (into that folder), New
+  folder, New file, Rename, Delete, Refresh and Copy path. `/` has no
+  Rename or Delete.
+
+Rename, New folder and New file ask for a name. Rename starts with the
+name chosen up to its extension, as Finder and Explorer do. A name that is
+empty, `.`, `..` or has a `/` in it is refused, and so is a name already
+taken in the folder: a rename never replaces another file, and a new file
+never empties one that is there. Errors from the server (such as
+permission denied) show in the dialog, which stays open.
+
+Delete always asks first. A folder is deleted with everything in it. Links
+are never followed: deleting a link to a folder removes the link, not the
+folder it points to. Up to 16 files of a folder are removed at the same
+time, so large folders don't wait for each round trip. Canceling the
+dialog stops a delete that is still running; what was already removed
+stays removed.
+
+After a change the folder is listed again and a renamed or new item is
+chosen in the table. When the current folder, or one it is in, is
+renamed, the panel follows it to its new path; when it is deleted, the
+panel goes to the folder it was in.
 
 ### Upload and download
 

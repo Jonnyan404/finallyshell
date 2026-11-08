@@ -334,7 +334,7 @@ func TestUploadFromDialog(t *testing.T) {
 	f := filepath.Join(local, "notes.md")
 	os.WriteFile(f, []byte("# notes"), 0o644)
 	p.opened = []string{f}
-	a.pickAndUpload(s, false)
+	a.pickAndUpload(s, remote, false)
 	p.until(t, "the upload", func() bool { return len(a.transfers.jobs) == 1 && a.transfers.active() == 0 })
 	if data, _ := os.ReadFile(filepath.Join(remote, "notes.md")); string(data) != "# notes" {
 		t.Errorf("uploaded %q", data)

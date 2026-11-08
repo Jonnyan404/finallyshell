@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"path"
+	"slices"
 	"strings"
 
 	"finallyshell/internal/remotefs"
@@ -22,6 +23,10 @@ type fileState struct {
 	table    ui.ListState
 	chosen   ui.Selection[string] // names in cwd
 	row      int
+
+	// reveal is a name to choose in the table once cwd is read again: a
+	// file just renamed or made.
+	reveal string
 
 	tree     ui.OutlineState[string]
 	treeRow  int
@@ -94,6 +99,13 @@ func (a *App) openDir(s *Session, dir string) {
 			}
 			f.cwd, f.pathEdit, f.entries = dir, dir, entries
 			f.subdirs[dir] = dirNames(dir, entries)
+			if i := slices.IndexFunc(entries, func(e remotefs.Entry) bool { return e.Name == f.reveal }); f.reveal != "" && i >= 0 {
+				f.chosen.Clear()
+				f.chosen.Add(f.reveal)
+				f.row = i
+				f.table.ScrollIntoView(i)
+			}
+			f.reveal = ""
 			// Open the tree down to the directory.
 			for p := dir; ; p = path.Dir(p) {
 				f.tree.Open.Add(p)
@@ -201,10 +213,10 @@ func (a *App) filePanel(c *ui.Context) {
 			}
 			ui.Box(c).Size(1, 16).Background(ui.Hex("#e5e7eb")).Margin(0, 4)
 			if widgets.IconButton(c, "upload", locales.UploadFiles()).Clicked() {
-				a.pickAndUpload(s, false)
+				a.pickAndUpload(s, f.cwd, false)
 			}
 			if widgets.IconButton(c, "folder-up", locales.UploadFolder()).Clicked() {
-				a.pickAndUpload(s, true)
+				a.pickAndUpload(s, f.cwd, true)
 			}
 			names := f.chosenNames()
 			dl := widgets.IconButton(c, "download", locales.Download())
@@ -257,6 +269,7 @@ func (a *App) dirTree(c *ui.Context, s *Session) {
 	}, func(dir string) {
 		row := ui.Row(c).Gap(5).Grow(1).Radius(4)
 		a.dropZone(row, s, dir)
+		row.ContextMenu(func(m *ui.Menu) { a.treeMenu(c, m, s, dir) })
 		row.Children(func() {
 			name := path.Base(dir)
 			// "/" is a folder like any other, not a workspace's root,
@@ -330,6 +343,17 @@ func (a *App) fileTable(c *ui.Context, s *Session) {
 				a.openRemoteFile(s, path.Join(f.cwd, e.Name))
 			}
 		}
+		// F2 renames the row chosen; Delete, or Cmd+Backspace as in
+		// Finder, deletes those chosen.
+		rename := f.table.Shortcut(c, 0, ui.KeyF2)
+		del := f.table.Shortcut(c, 0, ui.KeyDelete)
+		del = f.table.Shortcut(c, ui.Cmd, ui.KeyBackspace) || del
+		if e, ok := f.entry(f.chosenNames()); ok && rename {
+			a.askRename(s, path.Join(f.cwd, e.Name), e.IsDir())
+		}
+		if del && f.chosen.Len() > 0 {
+			a.askDeleteChosen(s)
+		}
 		t.ContextMenu(func(m *ui.Menu) {
 			names := f.chosenNames()
 			if e, ok := f.entry(names); ok && editable(e) {
@@ -346,10 +370,25 @@ func (a *App) fileTable(c *ui.Context, s *Session) {
 			}
 			m.Separator()
 			if m.Item(locales.UploadFiles()).Chosen() {
-				a.pickAndUpload(s, false)
+				a.pickAndUpload(s, f.cwd, false)
 			}
 			if m.Item(locales.UploadFolder()).Chosen() {
-				a.pickAndUpload(s, true)
+				a.pickAndUpload(s, f.cwd, true)
+			}
+			m.Separator()
+			if m.Item(locales.NewFolder()).Chosen() {
+				a.askNew(s, f.cwd, opMkdir)
+			}
+			if m.Item(locales.NewFile()).Chosen() {
+				a.askNew(s, f.cwd, opCreate)
+			}
+			m.Separator()
+			e, one := f.entry(names)
+			if m.Item(locales.Rename()).Shortcut(0, ui.KeyF2).Disabled(!one).Chosen() && one {
+				a.askRename(s, path.Join(f.cwd, e.Name), e.IsDir())
+			}
+			if m.Item(locales.Delete()).Shortcut(0, ui.KeyDelete).Disabled(len(names) == 0).Chosen() && len(names) > 0 {
+				a.askDeleteChosen(s)
 			}
 			m.Separator()
 			if m.Item(locales.Refresh()).Chosen() {
