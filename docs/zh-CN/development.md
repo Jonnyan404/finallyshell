@@ -138,6 +138,8 @@ internal/
     import.go        “从 FinalShell 导入”窗口：查找或选择目录、预览和勾选、导入后在连接管理器里显示
     dialogs.go       密码、主机指纹、覆盖确认
     options.go       选项窗口：页面列表和“常规”页
+    options_appearance.go “常规”页的“外观”：浅色、深色或跟随系统
+    palette.go       应用的浅色和深色主题、主题之外的两套颜色，以及每个窗口用来按这一帧的外观选用它们的 useTheme
     keyseq.go        选项的“终端”页（默认编码、退格键和删除键），连接编辑器共用的选项，以及发送它们的按键处理
     mouse.go         “终端 › 鼠标”页，以及这些设置怎样变成终端的选项
     shortcuts.go     快捷键：操作和各平台的默认键、哪些键不能用、冲突、窗口快捷键的分派、终端的 Keybinds

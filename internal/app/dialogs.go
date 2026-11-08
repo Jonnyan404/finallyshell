@@ -86,7 +86,7 @@ func (a *App) hostKeyView(c *ui.Context, s *Session) {
 	ui.Column(c).Width(460).Gap(10).Children(func() {
 		ui.Text(c, locales.HostKeyTitle()).FontSize(16).Bold()
 		ui.Text(c, locales.HostKeyBody(q.Host))
-		ui.Column(c).Gap(4).Padding(8).Radius(6).Background(ui.Hex("#f3f4f6")).Children(func() {
+		ui.Column(c).Gap(4).Padding(8).Radius(6).Background(colors.note).Children(func() {
 			widgets.Muted(c, q.KeyType)
 			ui.Text(c, q.Fingerprint).Font("monospace").Selectable()
 		})

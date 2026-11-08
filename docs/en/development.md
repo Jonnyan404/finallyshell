@@ -181,6 +181,8 @@ internal/
     import.go        the "Import from FinalShell" window: finding or choosing the folder, preview and checkboxes, showing the result in the connection manager
     dialogs.go       password, host key and replace confirmations
     options.go       options window: the list of pages and the General page
+    options_appearance.go the Appearance row of the General page: light, dark or the system's
+    palette.go       the app's light and dark themes, the colors besides the theme's for each, and useTheme, which every window calls to pick them by the frame's appearance
     keyseq.go        the Terminal page of the options (default encoding, Backspace and Delete), the choices the connection editor shares, and the key handlers that send them
     mouse.go         the Terminal › Mouse page, and how its settings become terminal options
     shortcuts.go     shortcuts: actions and their defaults per platform, keys that cannot be used, conflicts, dispatching window shortcuts, the terminal's Keybinds

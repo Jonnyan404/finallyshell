@@ -196,7 +196,7 @@ func (a *App) filePanel(c *ui.Context) {
 	}
 	f := &s.files
 	ui.Column(c.Key(s.ID)).Grow(1).Children(func() {
-		ui.Row(c).Padding(4, 8).Gap(4).BorderWidth(0, 0, 1, 0).BorderColor(ui.Hex("#e5e7eb")).Children(func() {
+		ui.Row(c).Padding(4, 8).Gap(4).BorderWidth(0, 0, 1, 0).BorderColor(colors.line).Children(func() {
 			if ui.TextInput(c, &f.pathEdit).Grow(1).Submitted() {
 				a.openDir(s, f.pathEdit)
 			}
@@ -211,7 +211,7 @@ func (a *App) filePanel(c *ui.Context) {
 					a.openDir(s, home)
 				}
 			}
-			ui.Box(c).Size(1, 16).Background(ui.Hex("#e5e7eb")).Margin(0, 4)
+			ui.Box(c).Size(1, 16).Background(colors.line).Margin(0, 4)
 			if widgets.IconButton(c, "upload", locales.UploadFiles()).Clicked() {
 				a.pickAndUpload(s, f.cwd, false)
 			}
@@ -229,7 +229,7 @@ func (a *App) filePanel(c *ui.Context) {
 			if f.loading {
 				ui.Spinner(c)
 			}
-			ui.Box(c).Size(1, 16).Background(ui.Hex("#e5e7eb")).Margin(0, 4)
+			ui.Box(c).Size(1, 16).Background(colors.line).Margin(0, 4)
 			a.downloadsButton(c)
 		})
 		if f.err != nil {

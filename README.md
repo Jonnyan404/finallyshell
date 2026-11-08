@@ -122,6 +122,7 @@ Servers whose locale isn't UTF-8 work too: the terminal converts GBK, GB18030, B
 ### And also
 
 - English and Simplified Chinese, following the system language or chosen in Options.
+- Light and dark appearance, following the system or chosen in Options.
 - Every shortcut can be changed. Keys the shell needs, such as <kbd>Ctrl</kbd>+<kbd>C</kbd> or <kbd>Ctrl</kbd>+<kbd>R</kbd>, are refused with an explanation.
 - Minimize to the tray or menu bar, and confirm before closing while sessions are connected.
 - Only one copy runs at a time: opening it again brings the running window forward.

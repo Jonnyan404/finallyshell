@@ -248,7 +248,7 @@ Ctrl+Shift+Enter（macOS 是 Cmd+Enter）隐藏左边栏和下面的文件面板
 - Ghostty 自带的几百个主题（`terminal.GhosttyThemes()`），也包括 Ghostty 主题目录里用户自己的。
 - 搜索框按名称过滤。每行带背景色和几种颜色的小样，预览下面是 16 种 ANSI 颜色。
 - 默认 Tomorrow Night。主题文件不见了时用默认的。
-- 界面一直是浅色，插件的 `DarkTheme` 只在深色窗口里用，所以只有一个选择，同时设给 `Theme` 和 `DarkTheme`。
+- 应用的浅色和深色外观（选项 › 常规 › 外观）用同一个配色，所以只有一个选择，同时设给插件的 `Theme` 和 `DarkTheme`。
 
 背景图片：
 
@@ -276,7 +276,7 @@ Ctrl+Shift+Enter（macOS 是 Cmd+Enter）隐藏左边栏和下面的文件面板
 - 自动列出 VS Code、VS Code Insiders、VSCodium、Cursor、Windsurf 里已经装了的图标主题（`~/.vscode/extensions` 等，Windows 上在 `%USERPROFILE%` 下），直接读，不复制。已卸载的（`.obsolete`）跳过，同一个扩展只列最新版本。“刷新”重新查找。
 - 选中的主题后来不见了或读不出来时，面板显示 Material Icon Theme，并在选项页说明原因。
 
-只读取主题的 JSON 和它引用的 SVG、PNG、字体，扩展里的代码不会运行。引用到扩展外面的路径直接忽略。用字体做图标的主题（Seti 用 WOFF，file-icons 用 WOFF2）先转成 TrueType 再注册给界面。按 VS Code 的规则匹配：先文件名，再扩展名（最长的优先，`a.test.ts` 先找 `test.ts`），再语言（文件名到语言的对应表来自 VS Code 自带的语言扩展），最后是默认的文件图标。界面是浅色的，所以用主题的 `light` 部分。
+只读取主题的 JSON 和它引用的 SVG、PNG、字体，扩展里的代码不会运行。引用到扩展外面的路径直接忽略。用字体做图标的主题（Seti 用 WOFF，file-icons 用 WOFF2）先转成 TrueType 再注册给界面。按 VS Code 的规则匹配：先文件名，再扩展名（最长的优先，`a.test.ts` 先找 `test.ts`），再语言（文件名到语言的对应表来自 VS Code 自带的语言扩展），最后是默认的文件图标。和 VS Code 一样，只在应用是浅色时用主题的 `light` 部分；深色外观下用主题本来的图标。切换外观时图标立刻跟着换。
 
 在 `settings.json` 里是 `fileIconTheme`：没有是 Material，`minimal` 是简洁，`bundled:seti` 是 Seti，其他是 `<发布者>.<名称>/<主题 ID>`。
 
@@ -430,6 +430,7 @@ Ctrl+Shift+Enter（macOS 是 Cmd+Enter）隐藏左边栏和下面的文件面板
 ### 常规
 
 - 界面语言：跟随系统、English 或简体中文。
+- 外观：跟随系统（默认）、浅色或深色。跟随系统时按系统的浅色或深色外观显示，应用运行中系统切换了也跟着变；浅色、深色则固定。所有窗口立刻切换，包括系统标题栏，下次启动也用保存的外观。终端在两种外观下都保持自己的配色。保存为 `appearance`。
 - 自动选中标签（默认开）：新连接打开后切换过去。关掉后新会话在后台打开，当前会话保持选中；没有选中的会话时仍然选中新的。
 - 关闭时最小化到托盘（默认关）：点主窗口的关闭按钮时隐藏到托盘图标（macOS 是菜单栏）。图标菜单里有“显示主窗口”和“退出”。Windows 上左键单击图标也能显示窗口，macOS 上点 Dock 图标也能显示。系统没有托盘时（Linux 没装 `libayatana-appindicator3`）按没开这一项处理。
 - 关闭窗口前确认（默认开）：有会话已连接或正在连接时，关闭主窗口或退出（托盘菜单、macOS 的 Cmd+Q）之前用系统的消息框问一次。同时开了托盘：关闭按钮直接隐藏，不问；“退出”才问。

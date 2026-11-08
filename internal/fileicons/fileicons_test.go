@@ -57,7 +57,7 @@ const testTheme = `{
 	"folderNames": {"SRC": "folder-src", "docs": "folder-docs"},
 	"folderNamesExpanded": {"src": "folder-src-open"},
 	"rootFolderNames": {"/": "root-named"},
-	/* VS Code shows these on light themes, as the app is. */
+	/* VS Code shows these on light themes only. */
 	"light": {"fileExtensions": {"ts": "light-ts"}},
 }`
 
@@ -118,6 +118,36 @@ func TestFileRules(t *testing.T) {
 		if got := id(th.File(name)); got != want {
 			t.Errorf("File(%q) = %s, want %s", name, got, want)
 		}
+	}
+}
+
+// TestDarkAppearance checks that the theme for a dark background leaves
+// the light section out, and shares the icons with the light one.
+func TestDarkAppearance(t *testing.T) {
+	th := loadTest(t)
+	dark := th.Appearance(true)
+	if dark == th || dark.Appearance(false) != th || th.Appearance(false) != th || dark.Appearance(true) != dark {
+		t.Fatal("Appearance does not give the two themes")
+	}
+	for name, want := range map[string]string{
+		"a.ts":      "ext-ts", // no light section
+		"gone.ts":   "ext-ts",
+		"a.test.ts": "ext-test-ts",
+		"main.go":   "lang-go",
+	} {
+		if got := id(dark.File(name)); got != want {
+			t.Errorf("dark File(%q) = %s, want %s", name, got, want)
+		}
+	}
+	if got := id(th.File("a.ts")); got != "light-ts" {
+		t.Errorf("light File(a.ts) = %s", got)
+	}
+	if dark.File("main.go") != th.File("main.go") {
+		t.Error("the two themes made an icon twice")
+	}
+	var none *Theme
+	if none.Appearance(true) != nil {
+		t.Error("a nil theme has a dark one")
 	}
 }
 

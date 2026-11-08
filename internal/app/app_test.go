@@ -38,6 +38,7 @@ type fakePlatform struct {
 	fakeFolderPicker
 	fakeDownloads
 	fakeVSIXPicker
+	fakeAppearance
 	*fakeSecrets
 }
 

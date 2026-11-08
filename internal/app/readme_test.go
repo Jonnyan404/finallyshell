@@ -81,6 +81,18 @@ func TestReadmeScreenshots(t *testing.T) {
 				saveShot(t, tt, "readme-main-"+lang+".png")
 			})
 
+			// The same scene in the dark appearance, which the README
+			// does not show (yet).
+			t.Run("main-dark", func(t *testing.T) {
+				_, _, tt, _ := readmeApp(t, lang)
+				tt.SetDark(true)
+				tt.Frame()
+				if !theme.Dark || !tt.HasText("docker-compose.yml") {
+					t.Fatalf("dark %v; texts %q", theme.Dark, tt.Texts())
+				}
+				saveShot(t, tt, "readme-main-dark-"+lang+".png")
+			})
+
 			t.Run("sysinfo", func(t *testing.T) {
 				a, p, tt, _ := readmeApp(t, lang)
 				f := newFakeSysInfo(a)

@@ -66,9 +66,9 @@ func serverStats(c *ui.Context, st *monitor.Stats) {
 	if st == nil {
 		ui.Text(c, locales.UptimeUnknown())
 		ui.Text(c, locales.LoadAverage("-"))
-		widgets.UsageBar(c, locales.Cpu(), 0, "0%", cpuColor)
-		widgets.UsageBar(c, locales.Memory(), 0, "0%", memColor)
-		widgets.UsageBar(c, locales.Swap(), 0, "0%", swapColor)
+		widgets.UsageBar(c, locales.Cpu(), 0, "0%", colors.cpu)
+		widgets.UsageBar(c, locales.Memory(), 0, "0%", colors.mem)
+		widgets.UsageBar(c, locales.Swap(), 0, "0%", colors.swap)
 		procTable(c, nil)
 		netRow(c, 0, 0, "")
 		widgets.Sparkline(c, monitor.HistoryLen, nil, nil, formatBytes)
@@ -79,33 +79,27 @@ func serverStats(c *ui.Context, st *monitor.Stats) {
 	}
 	ui.Text(c, locales.UptimeDays(int(st.Uptime.Hours()/24)))
 	ui.Text(c, locales.LoadAverage(fmt.Sprintf("%.2f, %.2f, %.2f", st.Load[0], st.Load[1], st.Load[2])))
-	widgets.UsageBar(c, locales.Cpu(), st.CPU/100, fmt.Sprintf("%.0f%%", st.CPU), cpuColor)
-	widgets.UsageBar(c, locales.Memory(), ratio(st.MemUsed, st.MemTotal), usage(st.MemUsed, st.MemTotal), memColor)
-	widgets.UsageBar(c, locales.Swap(), ratio(st.SwapUsed, st.SwapTotal), usage(st.SwapUsed, st.SwapTotal), swapColor)
+	widgets.UsageBar(c, locales.Cpu(), st.CPU/100, fmt.Sprintf("%.0f%%", st.CPU), colors.cpu)
+	widgets.UsageBar(c, locales.Memory(), ratio(st.MemUsed, st.MemTotal), usage(st.MemUsed, st.MemTotal), colors.mem)
+	widgets.UsageBar(c, locales.Swap(), ratio(st.SwapUsed, st.SwapTotal), usage(st.SwapUsed, st.SwapTotal), colors.swap)
 
 	procTable(c, st.Procs)
 
 	netRow(c, st.TxRate, st.RxRate, st.Iface)
-	widgets.Sparkline(c, monitor.HistoryLen, [][]float64{st.TxHist, st.RxHist}, []ui.Color{ui.Hex("#fb923c"), ui.Hex("#4ade80")}, formatBytes)
+	widgets.Sparkline(c, monitor.HistoryLen, [][]float64{st.TxHist, st.RxHist}, []ui.Color{txChart, rxChart}, formatBytes)
 
 	latencyRow(c, formatLatency(st.Latency))
-	widgets.Sparkline(c, monitor.HistoryLen, [][]float64{st.LatHist}, []ui.Color{ui.Hex("#60a5fa")}, formatMillis)
+	widgets.Sparkline(c, monitor.HistoryLen, [][]float64{st.LatHist}, []ui.Color{latencyChart}, formatMillis)
 
 	diskTable(c, st.Disks)
 }
 
 func formatMillis(v float64) string { return fmt.Sprintf("%.0f", v) }
 
-var (
-	cpuColor  = ui.Hex("#86efac")
-	memColor  = ui.Hex("#fdba74")
-	swapColor = ui.Hex("#93c5fd")
-)
-
 func netRow(c *ui.Context, tx, rx float64, iface string) {
 	ui.Row(c).Gap(8).Margin(4, 0, 0, 0).Children(func() {
-		ui.Text(c, "↑"+formatBytes(tx)).TextColor(ui.Hex("#ea580c"))
-		ui.Text(c, "↓"+formatBytes(rx)).TextColor(ui.Hex("#16a34a"))
+		ui.Text(c, "↑"+formatBytes(tx)).TextColor(colors.tx)
+		ui.Text(c, "↓"+formatBytes(rx)).TextColor(colors.rx)
 		ui.Spacer(c)
 		widgets.Muted(c, iface)
 	})
@@ -131,12 +125,12 @@ func usage(used, total uint64) string {
 }
 
 func procTable(c *ui.Context, procs []monitor.Proc) {
-	white := ui.Hex("#ffffff")
-	ui.Column(c).Border(1, ui.Hex("#d1d5db")).Background(ui.Hex("#fafafa")).Children(func() {
-		ui.Row(c).Background(ui.Hex("#60a5fa")).PaddingX(6).Height(20).Children(func() {
-			ui.Text(c, locales.Memory()).Width(54).TextColor(white).FontSize(12)
-			ui.Text(c, locales.Cpu()).Width(40).TextColor(white).FontSize(12)
-			ui.Text(c, locales.Command()).TextColor(white).FontSize(12)
+	headText := colors.procHeadText
+	ui.Column(c).Border(1, colors.frame).Background(colors.procTable).Children(func() {
+		ui.Row(c).Background(colors.procHead).PaddingX(6).Height(20).Children(func() {
+			ui.Text(c, locales.Memory()).Width(54).TextColor(headText).FontSize(12)
+			ui.Text(c, locales.Cpu()).Width(40).TextColor(headText).FontSize(12)
+			ui.Text(c, locales.Command()).TextColor(headText).FontSize(12)
 		})
 		for i, p := range procs {
 			ui.Row(c.Key(i)).PaddingX(6).Height(19).Children(func() {
@@ -149,8 +143,8 @@ func procTable(c *ui.Context, procs []monitor.Proc) {
 }
 
 func diskTable(c *ui.Context, disks []monitor.Disk) {
-	ui.Column(c).Margin(6, 0, 0, 0).Border(1, ui.Hex("#d1d5db")).Background(ui.Hex("#ffffff")).Children(func() {
-		ui.Row(c).PaddingX(6).Height(20).BorderWidth(0, 0, 1, 0).BorderColor(ui.Hex("#e5e7eb")).Children(func() {
+	ui.Column(c).Margin(6, 0, 0, 0).Border(1, colors.frame).Background(colors.diskTable).Children(func() {
+		ui.Row(c).PaddingX(6).Height(20).BorderWidth(0, 0, 1, 0).BorderColor(colors.line).Children(func() {
 			ui.Text(c, locales.DiskPath()).Grow(1).FontSize(12)
 			ui.Text(c, locales.DiskFreeSize()).FontSize(12)
 		})
@@ -165,7 +159,7 @@ func diskTable(c *ui.Context, disks []monitor.Disk) {
 
 // sessionPanel is the list of open sessions: the vertical tabs.
 func (a *App) sessionPanel(c *ui.Context) {
-	ui.Column(c).Fill().BorderWidth(1, 0, 0, 0).BorderColor(ui.Hex("#d1d5db")).Children(func() {
+	ui.Column(c).Fill().BorderWidth(1, 0, 0, 0).BorderColor(colors.frame).Children(func() {
 		ui.Row(c).Padding(6, 6, 6, 10).Gap(2).Children(func() {
 			ui.Text(c, locales.SessionsTitle(a.sessionCount())).Bold().Grow(1)
 			if widgets.IconButton(c, "settings", locales.Options()).Clicked() {

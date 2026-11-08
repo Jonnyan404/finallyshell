@@ -159,7 +159,7 @@ func (a *App) tunnelPanel(c *ui.Context) {
 	ts := &s.tunnels
 	connected := s.status == statusConnected && s.client != nil
 	ui.Column(c.Key(s.ID)).Grow(1).Children(func() {
-		ui.Row(c).Padding(4, 8).Gap(8).AlignItems(ui.Center).BorderWidth(0, 0, 1, 0).BorderColor(ui.Hex("#e5e7eb")).Children(func() {
+		ui.Row(c).Padding(4, 8).Gap(8).AlignItems(ui.Center).BorderWidth(0, 0, 1, 0).BorderColor(colors.line).Children(func() {
 			switch {
 			case !connected:
 				widgets.Muted(c, locales.TunnelsOffline()).Grow(1)

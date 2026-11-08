@@ -140,6 +140,7 @@ default.
 | Key | Meaning | Default (when missing) |
 |---|---|---|
 | `language` | UI language: `en` or `zh-Hans`. | Follow the system. |
+| `appearance` | `light` or `dark` forces the app's appearance; `system` follows the system's. | Follow the system (also for unknown values). |
 | `noAutoSelectTab` | `true` opens new sessions in the background. | New sessions are selected. |
 | `minimizeToTray` | `true` hides the main window to the tray when it is closed. | Closing quits. |
 | `noConfirmClose` | `true` closes and quits without asking while sessions are open. | Ask first. |

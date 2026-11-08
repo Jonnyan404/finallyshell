@@ -45,13 +45,24 @@ func Muted(c *ui.Context, s string) ui.Element {
 	return ui.Text(c, s).TextColor(c.Theme().TextMuted)
 }
 
+// chartColors are the colors of the bars and charts around what they
+// show, for the window's theme: the track and the outline of a bar, and
+// the outline of a chart, which is filled with the theme's background.
+func chartColors(t *ui.Theme) (track, barBorder, chartBorder ui.Color) {
+	if t.Dark {
+		return ui.Hex("#2a2a2f"), ui.Hex("#3f3f46"), ui.Hex("#2e2e33")
+	}
+	return ui.Hex("#e5e7eb"), ui.Hex("#d1d5db"), ui.Hex("#e5e7eb")
+}
+
 // UsageBar is a labeled bar filled to frac, from 0 to 1, with text over
 // it, as FinalShell's CPU and memory bars.
 func UsageBar(c *ui.Context, label string, frac float64, text string, fill ui.Color) {
 	frac = math.Max(0, math.Min(1, frac))
+	track, border, _ := chartColors(c.Theme())
 	ui.Row(c).Gap(6).Children(func() {
 		ui.Text(c, label).Width(34).Shrink(0).SingleLine()
-		ui.Box(c).Grow(1).Height(18).Background(ui.Hex("#e5e7eb")).Border(1, ui.Hex("#d1d5db")).Clip().Children(func() {
+		ui.Box(c).Grow(1).Height(18).Background(track).Border(1, border).Clip().Children(func() {
 			ui.Box(c).Absolute().Top(0).Left(0).Bottom(0).WidthPercent(float32(frac * 100)).Background(fill)
 			ui.Row(c).Fill().PaddingX(6).AlignItems(ui.Center).ZIndex(1).Children(func() {
 				ui.Text(c, text).FontSize(12).SingleLine()
@@ -69,7 +80,9 @@ func Sparkline(c *ui.Context, n int, series [][]float64, colors []ui.Color, form
 			peak = math.Max(peak, v)
 		}
 	}
-	ui.Box(c).Height(46).Background(ui.Hex("#ffffff")).Border(1, ui.Hex("#e5e7eb")).Draw(func(p *ui.Painter, r ui.Rect) {
+	t := c.Theme()
+	_, _, border := chartColors(t)
+	ui.Box(c).Height(46).Background(t.Background).Border(1, border).Draw(func(p *ui.Painter, r ui.Rect) {
 		if peak <= 0 {
 			return
 		}
@@ -87,8 +100,8 @@ func Sparkline(c *ui.Context, n int, series [][]float64, colors []ui.Color, form
 			}
 		}
 	}).Children(func() {
-		ui.Text(c, format(peak)).FontSize(10).TextColor(c.Theme().TextMuted).Absolute().Top(1).Left(1).
-			Padding(0, 3).Radius(3).Background(ui.RGBA(255, 255, 255, 0.85)).ZIndex(1)
+		ui.Text(c, format(peak)).FontSize(10).TextColor(t.TextMuted).Absolute().Top(1).Left(1).
+			Padding(0, 3).Radius(3).Background(t.Background.Alpha(0.85)).ZIndex(1)
 	})
 }
 

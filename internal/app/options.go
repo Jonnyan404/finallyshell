@@ -114,8 +114,8 @@ func (a *App) optionsView(c *ui.Context) {
 	})
 }
 
-// generalPage is the General page: the language, how tabs open, and what
-// closing the window does.
+// generalPage is the General page: the language, the appearance, how
+// tabs open, and what closing the window does.
 func (a *App) generalPage(c *ui.Context) {
 	ui.Column(c).Gap(8).Children(func() {
 		ui.Text(c, locales.SettingsLanguage()).Bold()
@@ -130,6 +130,7 @@ func (a *App) generalPage(c *ui.Context) {
 			a.setLanguage(chosen)
 		}
 	})
+	a.appearanceRow(c)
 
 	ui.Column(c).Gap(8).Padding(8, 0, 0, 0).Children(func() {
 		ui.Text(c, locales.OptionsTabsAndWindow()).Bold()

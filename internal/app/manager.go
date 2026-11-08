@@ -528,7 +528,7 @@ func (a *App) managerTable(c *ui.Context, later *[]func()) {
 			dropZone(cell, it, f.ID)
 			cell.Children(func() {
 				if col == 0 {
-					ui.Icon(c, icons.Get("folder")).FontSize(15).TextColor(ui.Hex("#eab308"))
+					ui.Icon(c, icons.Get("folder")).FontSize(15).TextColor(folderColor)
 					ui.Text(c, f.Name).SingleLine().MinWidth(0)
 				}
 			})

@@ -26,6 +26,9 @@ type Settings struct {
 	// Language is the language the user chose, as "en" or "zh-Hans", or ""
 	// to follow the system's.
 	Language string `json:"language,omitempty"`
+	// Appearance is whether the app is light or dark: AppearanceLight,
+	// AppearanceDark, or AppearanceSystem (or "") to follow the system's.
+	Appearance Appearance `json:"appearance,omitempty"`
 
 	// The sizes of the window's panes, as the user last dragged their
 	// dividers: the sidebar's and the folder tree's widths in DIPs, the
@@ -147,6 +150,24 @@ type Settings struct {
 // IconThemesDir is where the VSIX files of the icon themes the user
 // installs are kept.
 func IconThemesDir() string { return filepath.Join(Dir(), "icon-themes") }
+
+// Appearance is whether the app is light or dark (Settings.Appearance).
+type Appearance string
+
+const (
+	AppearanceSystem Appearance = "system" // the system's appearance
+	AppearanceLight  Appearance = "light"
+	AppearanceDark   Appearance = "dark"
+)
+
+// Normal returns a as one of the three appearances: a value this version
+// does not know, "" included, follows the system.
+func (a Appearance) Normal() Appearance {
+	if a == AppearanceLight || a == AppearanceDark {
+		return a
+	}
+	return AppearanceSystem
+}
 
 // RightClick is what a right click in a terminal does (Settings.RightClick).
 // A value this version does not know shows the context menu.

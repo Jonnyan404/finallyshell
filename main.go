@@ -187,6 +187,20 @@ func (p *platform) OpenPath(path string) error { return mygo.Shell.OpenPath(path
 func (p *platform) SetLocale(tag string)       { mygo.App.SetLocale(tag) }
 func (p *platform) Languages() []string        { return mygo.App.Languages() }
 
+// SetAppearance makes every window light or dark, or follow the system.
+func (p *platform) SetAppearance(a config.Appearance) { mygo.Theme.SetSource(themeSource(a)) }
+
+// themeSource is the appearance a as MyGo names it.
+func themeSource(a config.Appearance) mygo.ThemeSource {
+	switch a.Normal() {
+	case config.AppearanceLight:
+		return mygo.ThemeLight
+	case config.AppearanceDark:
+		return mygo.ThemeDark
+	}
+	return mygo.ThemeSystem
+}
+
 // ShowTransfers puts the count on the Dock icon (macOS; the launcher
 // entry on Linux docks that show one) and the progress under it, or on
 // the taskbar button (Windows), where MyGo shows SetProgressBar.
@@ -226,9 +240,13 @@ func main() {
 	if !mygo.App.RequestSingleInstanceLock() {
 		return
 	}
-	if lang := config.LoadSettings().Language; lang != "" {
+	settings := config.LoadSettings()
+	if lang := settings.Language; lang != "" {
 		mygo.App.SetLocale(lang)
 	}
+	// Light, dark or the system's, native title bars included, from the
+	// first frame.
+	mygo.Theme.SetSource(themeSource(settings.Appearance))
 	if runtime.GOOS == "darwin" {
 		// MyGo's default menu bar but its File menu, whose Close Window
 		// takes Cmd+W before the windows: the main one closes the tab with

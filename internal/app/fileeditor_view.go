@@ -15,24 +15,6 @@ import (
 	"github.com/egoist/mygo/ui/editor"
 )
 
-// The editor window's colors: FinalShell's light gray bars around the
-// white page of the text.
-var (
-	editorBarBG  = ui.Hex("#f3f4f6")
-	editorBorder = ui.Hex("#e5e7eb")
-)
-
-// codeTheme is the code's colors: the editor's light ones, with the
-// app's accent, and the line with the caret a faint gray.
-var codeTheme = func() *editor.Theme {
-	th := editor.DefaultTheme(theme)
-	th.ActiveLine = ui.Hex("#f6f7f9")
-	th.LineNumber = ui.Hex("#9ca3af")
-	th.Selection = theme.Accent.Alpha(0.18)
-	th.InactiveSelection = theme.Accent.Alpha(0.1)
-	return th
-}()
-
 // fileEditorView is the editor's window: the tabs, a toolbar, the text
 // and a status bar.
 func (a *App) fileEditorView(c *ui.Context) {
@@ -55,7 +37,7 @@ func (a *App) fileEditorView(c *ui.Context) {
 			case tabReady:
 				a.editorBanners(c, t)
 				t.code.SoftWrap = fe.wrap
-				t.code.Theme = codeTheme
+				t.code.Theme = codeTheme()
 				// Keyed, so that a banner coming or going keeps it.
 				code := editor.View(c.Key("code"), t.code).Grow(1).FillWidth().AutoFocus()
 				if fe.refocus {
@@ -109,15 +91,15 @@ func (a *App) fileEditorKeys(c *ui.Context) {
 // changes, and a button that closes it.
 func (a *App) editorTabStrip(c *ui.Context) {
 	fe := &a.fe
-	ui.Row(c).Background(editorBarBG).BorderWidth(0, 0, 1, 0).BorderColor(editorBorder).PaddingX(4).Shrink(0).Children(func() {
+	ui.Row(c).Background(colors.sidebar).BorderWidth(0, 0, 1, 0).BorderColor(colors.line).PaddingX(4).Shrink(0).Children(func() {
 		tabs := ui.TabsBase(c, &fe.sel, len(fe.tabs))
 		tabs.List.Grow(1).MinWidth(0).Clip().Children(func() {
 			for i, t := range fe.tabs {
 				tab := tabs.Tab(i).Row().Gap(6).AlignItems(ui.Center).Padding(7, 6, 6, 12).
-					MinWidth(0).Shrink(1).Tooltip(t.title()).BorderWidth(0, 1, 0, 0).BorderColor(editorBorder)
+					MinWidth(0).Shrink(1).Tooltip(t.title()).BorderWidth(0, 1, 0, 0).BorderColor(colors.line)
 				selected := i == fe.sel
 				if selected {
-					tab.Background(theme.Background).BorderWidth(2, 1, 0, 0).BorderColor(editorBorder).
+					tab.Background(theme.Background).BorderWidth(2, 1, 0, 0).BorderColor(colors.line).
 						Padding(5, 6, 6, 12)
 				}
 				hovered := tab.Hovered()
@@ -174,9 +156,9 @@ func (a *App) editorToolbar(c *ui.Context, t *editTab) {
 		}
 	}
 	run := func(cmd editor.Command) func() { return func() { t.code.Run(cmd) } }
-	ui.Row(c).Gap(2).Padding(3, 8).AlignItems(ui.Center).BorderWidth(0, 0, 1, 0).BorderColor(editorBorder).Shrink(0).Children(func() {
+	ui.Row(c).Gap(2).Padding(3, 8).AlignItems(ui.Center).BorderWidth(0, 0, 1, 0).BorderColor(colors.line).Shrink(0).Children(func() {
 		button("save", locales.Save(), ready && !t.saving && a.sftpFor(t) != nil, func() { a.saveTab(t, false) })
-		sep := func() { ui.Box(c).Size(1, 16).Background(editorBorder).Margin(0, 4) }
+		sep := func() { ui.Box(c).Size(1, 16).Background(colors.line).Margin(0, 4) }
 		sep()
 		button("undo-2", locales.Undo(), ready && t.code.Buffer.CanUndo(), run(editor.Undo))
 		button("redo-2", locales.Redo(), ready && t.code.Buffer.CanRedo(), run(editor.Redo))
@@ -210,7 +192,7 @@ func (a *App) editorToolbar(c *ui.Context, t *editTab) {
 // connected, or the file is not UTF-8.
 func (a *App) editorBanners(c *ui.Context, t *editTab) {
 	banner := func(bg, fg ui.Color, icon, text string, actions func()) {
-		ui.Row(c).Gap(8).Padding(5, 10).AlignItems(ui.Center).Background(bg).BorderWidth(0, 0, 1, 0).BorderColor(editorBorder).Shrink(0).Children(func() {
+		ui.Row(c).Gap(8).Padding(5, 10).AlignItems(ui.Center).Background(bg).BorderWidth(0, 0, 1, 0).BorderColor(colors.line).Shrink(0).Children(func() {
 			ui.Icon(c, icons.Get(icon)).FontSize(14).TextColor(fg)
 			ui.Text(c, text).Grow(1).Shrink(1)
 			if actions != nil {
@@ -219,10 +201,10 @@ func (a *App) editorBanners(c *ui.Context, t *editTab) {
 		})
 	}
 	if a.sftpFor(t) == nil {
-		banner(ui.Hex("#fef2f2"), theme.Danger, "unplug", locales.EditorDisconnected(t.host), nil)
+		banner(colors.dangerBanner, theme.Danger, "unplug", locales.EditorDisconnected(t.host), nil)
 	}
 	if t.notUTF8 && t.enc == encUTF8 {
-		banner(ui.Hex("#fffbeb"), theme.Warning, "triangle-alert", locales.EditorNotUTF8(), func() {
+		banner(colors.warningBanner, theme.Warning, "triangle-alert", locales.EditorNotUTF8(), func() {
 			if ui.Button(c, locales.EditorReopenAs(string(encGB18030))).Clicked() {
 				a.setEncoding(t, encGB18030)
 				a.fe.refocus = true
@@ -330,7 +312,7 @@ func fileErrText(err error, host string) string {
 // the caret's line and column, the encoding and the line endings on the
 // right; the last two are menus.
 func (a *App) editorStatusBar(c *ui.Context, t *editTab) {
-	ui.Row(c).Gap(4).Padding(2, 10).AlignItems(ui.Center).Background(editorBarBG).BorderWidth(1, 0, 0, 0).BorderColor(editorBorder).Shrink(0).Height(26).Children(func() {
+	ui.Row(c).Gap(4).Padding(2, 10).AlignItems(ui.Center).Background(colors.sidebar).BorderWidth(1, 0, 0, 0).BorderColor(colors.line).Shrink(0).Height(26).Children(func() {
 		small := func(s string) ui.Element { return ui.Text(c, s).FontSize(12).SingleLine() }
 		status := ui.Row(c).Gap(5).Grow(1).Shrink(1).MinWidth(0).AlignItems(ui.Center)
 		status.Children(func() {

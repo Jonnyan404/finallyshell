@@ -103,15 +103,22 @@ func loadIconTheme(key, installDir, home string) (*fileicons.Theme, error) {
 // fileIcon shows the icon of a file or folder named name, open or not,
 // the tree's root or not, in a box of 16 DIPs as VS Code's explorer.
 func (a *App) fileIcon(c *ui.Context, name string, dir, open, root bool) {
-	var ic *fileicons.Icon
-	if th := a.fileIconTheme(); th != nil {
-		if dir {
-			ic = th.Folder(name, open, root)
-		} else {
-			ic = th.File(name)
-		}
+	drawFileIcon(c, a.iconOf(name, dir, open, root, theme.Dark), dir)
+}
+
+// iconOf returns the icon of a file or folder in the file panel's theme,
+// as it shows on a dark background or a light one (the theme's light
+// section, as VS Code shows it on light themes only), or nil for the
+// app's own.
+func (a *App) iconOf(name string, dir, open, root, dark bool) *fileicons.Icon {
+	th := a.fileIconTheme().Appearance(dark)
+	if th == nil {
+		return nil
 	}
-	drawFileIcon(c, ic, dir)
+	if dir {
+		return th.Folder(name, open, root)
+	}
+	return th.File(name)
 }
 
 // entryIcon shows the icon of an entry of the file panel, with an arrow
@@ -134,7 +141,7 @@ func drawFileIcon(c *ui.Context, ic *fileicons.Icon, dir bool) {
 	ui.Box(c).Size(16, 16).Shrink(0).Center().Children(func() {
 		switch {
 		case ic == nil && dir:
-			ui.Icon(c, icons.Get("folder")).FontSize(14).TextColor(ui.Hex("#eab308"))
+			ui.Icon(c, icons.Get("folder")).FontSize(14).TextColor(folderColor)
 		case ic == nil:
 			ui.Icon(c, icons.Get("file")).FontSize(14).TextColor(theme.TextMuted)
 		case ic.Image != nil:

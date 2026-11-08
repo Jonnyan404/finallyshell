@@ -89,7 +89,7 @@ func (a *App) openWindow(spec WindowSpec, view func(c *ui.Context)) {
 	a.windows[spec.Kind] = true
 	kind, title, sheet, ownKeys, closed := spec.Kind, spec.Title, spec.Modal && sheets, spec.OwnKeys, spec.Closed
 	a.plat.OpenWindow(spec, func(c *ui.Context) {
-		c.SetTheme(theme)
+		useTheme(c)
 		if !ownKeys && (c.Shortcut(0, ui.KeyEscape) || a.closeWindowShortcut(c)) {
 			a.closeWindow(kind)
 		}

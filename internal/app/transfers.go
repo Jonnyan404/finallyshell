@@ -297,7 +297,7 @@ func (a *App) clearFinished() {
 func (a *App) transferPanel(c *ui.Context) {
 	q := &a.transfers
 	ui.Column(c).Grow(1).Children(func() {
-		ui.Row(c).Padding(4, 8).Gap(8).BorderWidth(0, 0, 1, 0).BorderColor(ui.Hex("#e5e7eb")).Children(func() {
+		ui.Row(c).Padding(4, 8).Gap(8).BorderWidth(0, 0, 1, 0).BorderColor(colors.line).Children(func() {
 			ui.Spacer(c)
 			if ui.Button(c, locales.ClearFinished()).Disabled(len(q.jobs) == a.transfers.active()).Clicked() {
 				a.clearFinished()
@@ -319,7 +319,7 @@ func (a *App) transferPanel(c *ui.Context) {
 // popover: its name, where it goes, its progress or how it ended, and
 // what can be done with it.
 func (a *App) transferRow(c *ui.Context, t *transferJob) {
-	row := ui.Row(c).Gap(10).Padding(6, 10).BorderWidth(0, 0, 1, 0).BorderColor(ui.Hex("#f1f5f9"))
+	row := ui.Row(c).Gap(10).Padding(6, 10).BorderWidth(0, 0, 1, 0).BorderColor(colors.rowLine)
 	row.Children(func() {
 		ic, dirLabel, dest := icons.Get("upload"), locales.UploadDirection(), t.sess.label()+":"+t.dstDir
 		if t.dir == download {

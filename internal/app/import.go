@@ -247,7 +247,7 @@ func (a *App) importFolderRow(c *ui.Context, st *importState) {
 		return
 	}
 	ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-		ui.Icon(c, icons.Get("folder")).FontSize(15).TextColor(ui.Hex("#eab308"))
+		ui.Icon(c, icons.Get("folder")).FontSize(15).TextColor(folderColor)
 		ui.Text(c, locales.FinalShellFolderAt(dir)).SingleLine().MinWidth(0).Grow(1).Tooltip(dir)
 		if st.busy && st.src != nil {
 			ui.Spinner(c)

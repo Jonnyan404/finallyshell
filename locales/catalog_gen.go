@@ -3088,6 +3088,56 @@ func (msgs Messages) SettingsLanguage() string {
 	return Catalog.Format(msgs.locale, "settingsLanguage", nil)
 }
 
+// OptionsAppearance says "Appearance"
+// in the language the app shows.
+func OptionsAppearance() string { return In(i18n.Locale()).OptionsAppearance() }
+
+// OptionsAppearance says "Appearance"
+// in the language of msgs.
+func (msgs Messages) OptionsAppearance() string {
+	return Catalog.Format(msgs.locale, "optionsAppearance", nil)
+}
+
+// AppearanceSystem says "System"
+// in the language the app shows.
+func AppearanceSystem() string { return In(i18n.Locale()).AppearanceSystem() }
+
+// AppearanceSystem says "System"
+// in the language of msgs.
+func (msgs Messages) AppearanceSystem() string {
+	return Catalog.Format(msgs.locale, "appearanceSystem", nil)
+}
+
+// AppearanceLight says "Light"
+// in the language the app shows.
+func AppearanceLight() string { return In(i18n.Locale()).AppearanceLight() }
+
+// AppearanceLight says "Light"
+// in the language of msgs.
+func (msgs Messages) AppearanceLight() string {
+	return Catalog.Format(msgs.locale, "appearanceLight", nil)
+}
+
+// AppearanceDark says "Dark"
+// in the language the app shows.
+func AppearanceDark() string { return In(i18n.Locale()).AppearanceDark() }
+
+// AppearanceDark says "Dark"
+// in the language of msgs.
+func (msgs Messages) AppearanceDark() string {
+	return Catalog.Format(msgs.locale, "appearanceDark", nil)
+}
+
+// AppearanceNote says "System follows your computer's light or dark appearance. The terminal keeps its own color scheme (Terminal › Color …"
+// in the language the app shows.
+func AppearanceNote() string { return In(i18n.Locale()).AppearanceNote() }
+
+// AppearanceNote says "System follows your computer's light or dark appearance. The terminal keeps its own color scheme (Terminal › Color …"
+// in the language of msgs.
+func (msgs Messages) AppearanceNote() string {
+	return Catalog.Format(msgs.locale, "appearanceNote", nil)
+}
+
 // Options says "Options"
 // in the language the app shows.
 func Options() string { return In(i18n.Locale()).Options() }

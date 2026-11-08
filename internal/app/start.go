@@ -231,7 +231,7 @@ func (a *App) quickConnect(c *ui.Context, tab *Session, st *startState) {
 	})
 	ui.Column(c).Grow(1).MinHeight(0).Border(1, theme.Border).Radius(6).Clip().Children(func() {
 		// The list pads its rows by 4 more.
-		ui.Row(c).Gap(12).Padding(6, 16).Background(ui.Hex("#f9fafb")).BorderWidth(0, 0, 1, 0).BorderColor(theme.Border).Children(func() {
+		ui.Row(c).Gap(12).Padding(6, 16).Background(colors.tableHead).BorderWidth(0, 0, 1, 0).BorderColor(theme.Border).Children(func() {
 			quickColumns(c, theme.TextMuted, locales.HostColName(), locales.HostColHost(), locales.HostColUser())
 		})
 		st.list.Selected = &st.row

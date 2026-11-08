@@ -459,9 +459,9 @@ Color scheme:
   preview.
 - The default is Tomorrow Night. If the theme file goes missing, the
   default is used.
-- The UI is always light, and the plugin's `DarkTheme` is only used in dark
-  windows, so there is a single choice, set as both `Theme` and
-  `DarkTheme`.
+- The same scheme shows in the light and the dark appearance of the app
+  (Options › General › Appearance): there is a single choice, set as both
+  the plugin's `Theme` and its `DarkTheme`.
 
 Background image:
 
@@ -542,7 +542,9 @@ registered with the UI. Icons are matched with VS Code's rules: file name
 first, then extension (the longest first, so `a.test.ts` looks for
 `test.ts` first), then language (the file name to language table comes
 from the language extensions that VS Code ships), and finally the default
-file icon. The UI is light, so the theme's `light` section is used.
+file icon. As in VS Code, the theme's `light` section is used only while
+the app is light; in the dark appearance the icons are the theme's own.
+Switching the appearance switches the icons at once.
 
 In `settings.json` this is `fileIconTheme`: missing means Material,
 `minimal` is Minimal, `bundled:seti` is Seti, and anything else is
@@ -836,6 +838,11 @@ file icon theme page under [File icon themes](#file-icon-themes).
 ### General
 
 - Language: System language, English or 简体中文.
+- Appearance: System (the default), Light or Dark. System follows the
+  system's light or dark appearance, also when it changes while the app
+  runs. Light and Dark force it. Every window switches at once, native
+  title bars included, and the app starts in the saved appearance. The
+  terminal keeps its color scheme in both. Saved as `appearance`.
 - Select new tabs automatically (on by default): switch to a new
   connection once it opens. When off, new sessions open in the background
   and the current session stays selected; if no session is selected, the

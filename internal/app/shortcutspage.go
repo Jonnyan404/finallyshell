@@ -32,12 +32,6 @@ type keyCapture struct {
 // macOS has.
 var optionAsAltShown = runtime.GOOS == "darwin"
 
-// Colors of what the dialog says of a key.
-var (
-	problemText = ui.Hex("#b91c1c")
-	warningText = ui.Hex("#a16207")
-)
-
 // shortcutsPageView is the Shortcuts page: the actions and their keys,
 // as FinalShell's, with Change, Reset and Reset all, and Option as Alt on
 // macOS.
@@ -154,13 +148,13 @@ func (a *App) captureDialog(c *ui.Context) {
 			}
 			switch {
 			case problem != keyOK:
-				ui.Text(c, problem.message(goos)).TextColor(problemText)
+				ui.Text(c, problem.message(goos)).TextColor(colors.problemText)
 			case cp.taken:
 				for _, id := range shortcutConflicts(&a.settings.Shortcuts, goos, cp.id, cp.key) {
-					ui.Text(c, locales.ShortcutConflict(actionOf(id).title())).TextColor(warningText)
+					ui.Text(c, locales.ShortcutConflict(actionOf(id).title())).TextColor(colors.warningText)
 				}
 				if terminalKeyClash(cp.key, act.digits) {
-					ui.Text(c, locales.ShortcutTerminalKey()).TextColor(warningText)
+					ui.Text(c, locales.ShortcutTerminalKey()).TextColor(colors.warningText)
 				}
 			}
 			ui.Row(c).Gap(8).Padding(6, 0, 0, 0).Children(func() {

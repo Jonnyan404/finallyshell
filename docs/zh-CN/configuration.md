@@ -110,6 +110,7 @@ Finallyshell 把主机和设置存在普通的 JSON 文件里。密码从不写�
 | 键 | 含义 | 默认值（没有这个键时） |
 |---|---|---|
 | `language` | 界面语言：`en` 或 `zh-Hans`。 | 跟随系统。 |
+| `appearance` | `light` 或 `dark` 固定应用的外观；`system` 跟随系统。 | 跟随系统（不认识的值也一样）。 |
 | `noAutoSelectTab` | `true` 时新会话在后台打开。 | 选中新会话。 |
 | `minimizeToTray` | `true` 时关闭主窗口会把它隐藏到托盘。 | 关闭就退出。 |
 | `noConfirmClose` | `true` 时有会话打开也不问，直接关闭、退出。 | 先问。 |

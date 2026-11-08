@@ -63,6 +63,9 @@ type Platform interface {
 	SetLocale(tag string)
 	// Languages are the languages the app is written in.
 	Languages() []string
+	// SetAppearance makes every window light or dark, native title bars
+	// included, or follow the system's appearance.
+	SetAppearance(a config.Appearance)
 
 	// OpenWindow opens a secondary window showing view, as spec says, a
 	// child of the window of spec.Parent, or of the main window for "".
@@ -226,22 +229,9 @@ func (a *App) current() *Session {
 	return nil
 }
 
-func newTheme() *ui.Theme {
-	t := ui.LightTheme()
-	t.Spacing = 3
-	t.FontSize = 13
-	t.Font = "Microsoft YaHei UI, PingFang SC, Noto Sans CJK SC, WenQuanYi Zen Hei, system-ui"
-	return t
-}
-
-var theme = newTheme()
-
-// sidebarBG is the gray of the side panel, as FinalShell's.
-var sidebarBG = ui.Hex("#f3f4f6")
-
 // View builds the window.
 func (a *App) View(c *ui.Context) {
-	c.SetTheme(theme)
+	useTheme(c)
 	a.shortcuts(c)
 	a.saveLayoutAtRest(c)
 	if a.fullScreen.on {
@@ -261,7 +251,7 @@ func (a *App) cycle(d int) {
 }
 
 func (a *App) sidebar(c *ui.Context) {
-	ui.Column(c).Fill().Background(sidebarBG).Children(func() {
+	ui.Column(c).Fill().Background(colors.sidebar).Children(func() {
 		split := ui.SplitVerticalPercent(c, &a.monitorPct, func() { a.monitorPanel(c) }, func() { a.sessionPanel(c) }).SplitReset(defaultMonitorPct).Fill()
 		a.splitMoved(c, split, &a.monitorPct, monitorLimits)
 	})
@@ -275,7 +265,7 @@ func (a *App) mainArea(c *ui.Context) {
 // bottomPanel is the files of the active session, and the transfers.
 func (a *App) bottomPanel(c *ui.Context) {
 	ui.Column(c).Fill().Background(theme.Background).Children(func() {
-		ui.Row(c).PaddingX(6).BorderWidth(0, 0, 1, 0).BorderColor(ui.Hex("#e5e7eb")).Children(func() {
+		ui.Row(c).PaddingX(6).BorderWidth(0, 0, 1, 0).BorderColor(colors.line).Children(func() {
 			transfersLabel := locales.TabTransfers()
 			if n := a.transfers.active(); n > 0 {
 				transfersLabel = locales.TabTransfersActive(n)

@@ -221,7 +221,7 @@ func (a *App) downloadsBody(c *ui.Context) {
 func (a *App) downloadFolderLine(c *ui.Context) {
 	dir := a.downloadDir()
 	ui.Row(c).Padding(8, 10).Gap(6).AlignItems(ui.Center).BorderWidth(0, 0, 1, 0).BorderColor(theme.Border).Children(func() {
-		ui.Icon(c, icons.Get("folder")).FontSize(14).TextColor(ui.Hex("#eab308")).Shrink(0)
+		ui.Icon(c, icons.Get("folder")).FontSize(14).TextColor(folderColor).Shrink(0)
 		widgets.MiddleText(c, dir, 12.5, 0).Tooltip(dir)
 		if smallButton(c, locales.ChangeFolder()).Disabled(a.transfers.popover.choosing).Clicked() {
 			a.chooseDownloadDir(WindowMain)
@@ -244,7 +244,7 @@ func (a *App) transfersPage(c *ui.Context) {
 		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, locales.DownloadFolder()).Shrink(0)
 			widgets.MiddleText(c, a.downloadDir(), theme.FontSize, 8).PaddingY(4).Radius(4).
-				Border(1, theme.Border).Background(sidebarBG).Tooltip(a.downloadDir())
+				Border(1, theme.Border).Background(colors.sidebar).Tooltip(a.downloadDir())
 			if ui.Button(c, locales.ChangeFolder()).Disabled(a.transfers.popover.choosing).Clicked() {
 				a.chooseDownloadDir(WindowOptions)
 			}

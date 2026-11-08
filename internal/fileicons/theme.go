@@ -73,16 +73,39 @@ type iconDef struct {
 }
 
 // Theme is a file icon theme, read whole: what Theme.File and
-// Theme.Folder find the icons with. Its methods may be called from any
-// goroutine, apart from RegisterFonts.
+// Theme.Folder find the icons with. It is the theme for a light
+// background, with its light section, which VS Code shows on light
+// themes; Appearance gives the one for a dark background. Its methods may
+// be called from any goroutine, apart from RegisterFonts.
 type Theme struct {
+	*themeData
+	a associations // the names to icons on this background
+}
+
+// themeData is what both backgrounds of a theme share: the icons, their
+// fonts, and the icons made so far.
+type themeData struct {
 	defs  map[string]iconDef
-	a     associations
 	fonts map[string]*themeFont
 	first string // the id of the font icons take when they name none
 
+	light, dark *Theme
+
 	mu    sync.Mutex
 	icons map[string]*Icon // made so far, nil for one that cannot show
+}
+
+// Appearance returns the theme for a dark background when dark is set,
+// without its light section, or for a light one. Both share their icons
+// and fonts.
+func (t *Theme) Appearance(dark bool) *Theme {
+	if t == nil {
+		return nil
+	}
+	if dark {
+		return t.dark
+	}
+	return t.light
 }
 
 // themeFont is a font of a theme, as TrueType or OpenType.
@@ -96,7 +119,7 @@ type themeFont struct {
 // readTheme reads the theme in fsys whose JSON file is at file, a path
 // of fsys, with the files of its icons, for a light background (its
 // light section, which VS Code shows on light themes, replaces what it
-// names).
+// names); Appearance(true) is the one for a dark background.
 func readTheme(fsys fs.FS, file string) (*Theme, error) {
 	data, err := readLimited(fsys, file, maxThemeJSON)
 	if err != nil {
@@ -107,12 +130,14 @@ func readTheme(fsys fs.FS, file string) (*Theme, error) {
 		return nil, fmt.Errorf("%s: %w", file, err)
 	}
 	dir := path.Dir(file)
-	t := &Theme{
+	shared := &themeData{
 		defs:  map[string]iconDef{},
-		a:     merge(j.associations, j.Light),
 		fonts: map[string]*themeFont{},
 		icons: map[string]*Icon{},
 	}
+	shared.light = &Theme{themeData: shared, a: merge(j.associations, j.Light)}
+	shared.dark = &Theme{themeData: shared, a: merge(j.associations, nil)}
+	t := shared.light
 
 	total := 0
 	files := map[string][]byte{} // read so far, nil for one that failed
