@@ -166,6 +166,24 @@ func (p *platform) OpenFileOfType(parent app.WindowKind, title, typeName string,
 // openOne asks for one file as opts say, over the window of parent, or
 // the main window when that is not open: "" when canceled.
 func (p *platform) openOne(parent app.WindowKind, opts mygo.OpenDialogOptions) (string, error) {
+	opts.Parent = p.owner(parent)
+	paths, err := mygo.Dialog.Open(opts)
+	if err != nil || len(paths) == 0 {
+		return "", err
+	}
+	return paths[0], nil
+}
+
+func (p *platform) SaveFile(parent app.WindowKind, title, path, typeName string, extensions []string) (string, error) {
+	return mygo.Dialog.Save(mygo.SaveDialogOptions{
+		Parent: p.owner(parent), Title: title, DefaultPath: path, CreateDirectories: true,
+		Filters: []mygo.FileFilter{{Name: typeName, Extensions: extensions}},
+	})
+}
+
+// owner is the window of parent, or the main window when that is not
+// open, for a dialog over it. It is called off the UI thread.
+func (p *platform) owner(parent app.WindowKind) *mygo.Window {
 	// The windows are the UI thread's; the dialog waits on this one.
 	owner := make(chan *mygo.Window, 1)
 	p.win.Update(func() {
@@ -175,12 +193,7 @@ func (p *platform) openOne(parent app.WindowKind, opts mygo.OpenDialogOptions) (
 		}
 		owner <- w
 	})
-	opts.Parent = <-owner
-	paths, err := mygo.Dialog.Open(opts)
-	if err != nil || len(paths) == 0 {
-		return "", err
-	}
-	return paths[0], nil
+	return <-owner
 }
 
 func (p *platform) DownloadsDir() string {

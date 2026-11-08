@@ -17,6 +17,7 @@ supported. [configuration.md](configuration.md) covers the files on disk;
   - [From SecureCRT](#from-securecrt)
   - [From MobaXterm](#from-mobaxterm)
   - [From an SSH config](#from-an-ssh-config)
+  - [From a CSV or Excel file](#from-a-csv-or-excel-file)
 - [Connection editor](#connection-editor)
   - [SSH connection](#ssh-connection)
   - [Terminal](#terminal-page)
@@ -461,6 +462,67 @@ block (not supported) as skipped; a `Port` that is not a number from 1 to
 65535 (ignored), a line that does not parse (a quote not closed), and an
 `Include` that cannot be read or goes past the limits as failed. Other
 keywords (`LocalForward`, `CertificateFile` and such) are ignored.
+
+### From a CSV or Excel file
+
+"CSV or Excel file" imports a list of servers kept in a spreadsheet: a
+`.csv`, `.tsv` or `.txt` file, or the first visible sheet of an Excel
+workbook (`.xlsx`). It has no place of its own, so the file chooser opens
+right away. "Save template…" at the bottom of the window saves
+`servers.csv` (the downloads folder is suggested): the headers in the
+app's language and one example row, to fill in and import.
+
+The first row is the header (a title row or a few above it are skipped:
+the first of the first ten rows with a host column is the header).
+Columns are found by their header, ignoring case, spaces, `_` and `-`;
+other columns are ignored:
+
+| Field | Headers |
+| --- | --- |
+| Name | name, label, title, 名称, 名字, 别名 |
+| Host (required) | host, hostname, address, ip, ip address, 主机, 主机名, 主机地址, 地址, ip地址 |
+| Port | port, 端口 |
+| User | user, username, login, 用户, 用户名, 账号 |
+| Password | password, 密码 |
+| Private key | key, private key, key file, identity file, 私钥, 私钥文件 |
+| Folder | folder, group, 文件夹, 分组 |
+| Notes | notes, note, description, comment, comments, 备注, 说明 |
+
+- A file without a host column is not imported: the window lists the
+  headers it found.
+- Rows are listed in the file's order. Empty rows are skipped. A row
+  without a host, or with a port that is not 1 to 65535, is listed below
+  the table with its row number, as failed.
+- A host written `host:port` (`[IPv6]:port` for an IPv6 address) gives
+  the port when the Port cell is empty; `user@host` gives the user when
+  the User cell is empty.
+- A folder `Production/Databases` (or with `\`) is a nested folder. A
+  list without a Folder column imports at the top level.
+- A private key file makes the host log in with that key; its Password
+  cell is then not used. The others log in with a password.
+- Passwords go into the system keychain, as "Remember password" does,
+  never into `hosts.json`. The table has a Password column that shows
+  `••••` for the rows with one, never the password.
+
+Text files: the encoding is the one Excel saved them in: "CSV UTF-8"
+(with a byte order mark), plain "CSV" (the system's code page, GBK on
+Chinese Windows) or "Unicode text" (UTF-16 with tabs). The delimiter is
+the header line's: a tab, `;` (Excel's CSV in many European languages)
+when there are more of them than of `,`, else `,`. A first line `sep=;`
+says it instead. Quotes are read as Excel writes them.
+
+Excel files: cells are read as text, numbers without a trailing `.0`, and
+a formula's cell as the value Excel or LibreOffice saved with it. Number
+formats (dates, currency) are not applied. Excel 97-2003 workbooks
+(`.xls`), workbooks protected with a password, and OpenDocument
+spreadsheets are not read: the window asks to save the file as `.xlsx`
+or CSV. A text file named `.xls`, as some systems export, is read as
+text.
+
+Limits: the file is at most 10 MB, and rows after the first 10,000 are
+not read (the first one not read is listed). A workbook's parts are
+unzipped to at most 32 MB each, and its sheet to at most about a million
+cells.
 
 ## Connection editor
 

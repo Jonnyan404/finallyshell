@@ -132,7 +132,7 @@ tools/release/       发布用的工具：算下一个版本号、生成 release
 tools/screenshots/   从 internal/app 的测试重新生成 docs/screenshots/ 里的 README 截图
 internal/
   config/            主机和文件夹（hosts.json）、设置的读写，背景图片的副本，配置目录；proxy.go 是代理设置和跳板机链（找循环）；tunnels.go 是隧道设置；keys.go 是退格键和删除键发送什么
-  importer/          读其他客户端的连接：importer.go 是来源列表（readers）、读出的连接和问题、文本解码（UTF-8、UTF-16、GB18030）、判重、按文件夹导入；finalshell.go 找 FinalShell 的目录、读 conn 里的连接和文件夹；xshell.go 找 Xshell 的 Sessions 文件夹、读 .xsh 会话文件和 .xts 导出文件；sshconfig.go 读 OpenSSH 的 ~/.ssh/config（Host 块和通配模式、Include、ProxyJump）；testdata 是编造的样例
+  importer/          读其他客户端的连接：importer.go 是来源列表（readers）、读出的连接和问题、文本解码（UTF-8、UTF-16、GB18030）、判重、按文件夹导入；finalshell.go 找 FinalShell 的目录、读 conn 里的连接和文件夹；xshell.go 找 Xshell 的 Sessions 文件夹、读 .xsh 会话文件和 .xts 导出文件；securecrt.go 找 SecureCRT 的配置目录、读它 Sessions 文件夹里的 .ini 文件；mobaxterm.go 找 MobaXterm.ini、读里面的书签段，以及 .mxtsessions 和 .moba 导出文件；sshconfig.go 读 OpenSSH 的 ~/.ssh/config（Host 块和通配模式、Include、ProxyJump）；table.go 读 CSV 文件或 .xlsx 第一个工作表里的服务器列表，.xlsx 由自己写的 xlsx.go 读（archive/zip 和 encoding/xml，有防 zip 炸弹的限制）；testdata 是编造的样例
   sshx/              SSH 连接、认证、known_hosts、给终端用的 Conn；proxy.go 是经过 SOCKS5、HTTP CONNECT 和跳板机连接；forward.go 是端口转发（-L/-R/-D）和 SOCKS5 服务端
   termenc/           终端的连接在服务器的编码（GBK、Big5……）和终端读的 UTF-8 之间转换
   sshtest/           测试用的进程内 SSH 服务器：密码登录、空的 shell、端口转发，StartSFTP 还提供 SFTP（本机文件系统）
@@ -164,6 +164,7 @@ internal/
     manager.go       连接管理器窗口：文件夹树、搜索、拖动、删除和恢复，a.deleteHostForever(h)
     import.go        “导入连接”窗口：选择来源、查找或选择它的文件或目录、预览和勾选、导入后在连接管理器里显示、列表里的密码存进密钥库
     import_sources.go 导入窗口里每个来源的文案（importTexts），以及来源给出的原因和说明的文案
+    import_table.go  导入窗口里服务器列表的部分：“保存模板…”按界面语言写的模板、列表特有错误的文案
     dialogs.go       密码、主机指纹、覆盖确认
     options.go       选项窗口：页面列表和“常规”页
     options_appearance.go “常规”页的“外观”：浅色、深色或跟随系统
@@ -244,7 +245,7 @@ var xshellReader = &Reader{
 
 1. `internal/importer/<来源>.go`：`Kind` 常量、`Reader`、它的 `Find` 和 `Read`，以及一段注释写清楚对这个格式知道什么、从哪里知道的。`Read` 返回的 `Source` 带着 `Kind` 和读的 `Path`；每个连接是一个 `Entry`：`Host`（没有 ID 和文件夹）、`Folder`（顶层是 nil）、`File`（某一行用 `At(file, line)`）、`KeyFile` 是来源写明的私钥文件、`NeedsKey` 是存在客户端自己密钥库里的私钥、`Jump` 是它的跳板机那一条、`Note` 是没有导入的设置、`Password` 只给用户自己写的列表用（存进密钥库，不会写进 `hosts.json`）。读不了的是 `Problem`（`NewProblem`、`ReadProblem`）；一个连接都没有就返回 `ErrNoConnections`。来源自己的 `Reason` 或 `Note` 是这个文件里的常量；故意跳过（不算失败）的原因在这个文件的 `init` 里加进 `skipped`：`func init() { skipped[Telnet] = true }`。`ReadText` 按文件实际的编码读文本文件，`sortSource` 按 FinalShell 那样排序。测试写在 `<来源>_test.go`，编造的样例放在 `testdata/<来源>/`。
 2. 在 `importer.go` 的 `readers` 里加一行，位置就是窗口里列出的位置。
-3. 在 `internal/app/import_sources.go` 的 `importTexts` 里加一项：列表里的名字、选择对话框的标题、文件类型的名字（有扩展名的文件来源）、找不到时说什么、表格上面的提示（加密密码的客户端用 `locales.ImportPasswordsNote(name)`）。新的 `Reason` 或 `Note` 在同一个文件的 `importProblemText` 或 `importNoteText` 里加文案。文案两种语言都要加（见[加一条文案](#加一条文案)）。
+3. 在 `internal/app/import_sources.go` 的 `importTexts` 里加一项：列表里的名字、选择对话框的标题、文件类型的名字（有扩展名的文件来源）、找不到时说什么、表格上面的提示（加密密码的客户端用 `locales.ImportPasswordsNote(name)`）。新的 `Reason` 或 `Note` 在同一个文件的 `importProblemText` 或 `importNoteText` 里加文案。可选的 `errorText` 用应用自己的话说来源特有的错误（否则窗口显示“无法读取”和错误本身）；`template` 是“保存模板…”要写的文件，给用户自己写的来源用，比如服务器列表（`import_table.go`）。文案两种语言都要加（见[加一条文案](#加一条文案)）。
 
 来源没有文案时 `TestImportSourcesListed` 会失败。加来源不用改 `import.go` 的其他地方。
 

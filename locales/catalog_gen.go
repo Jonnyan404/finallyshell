@@ -5324,6 +5324,286 @@ func (msgs Messages) ImportJumpHost(name string) string {
 	return Catalog.Format(msgs.locale, "importJumpHost", map[string]any{"name": name})
 }
 
+// ImportSourceTable says "CSV or Excel file"
+// in the language the app shows.
+func ImportSourceTable() string { return In(i18n.Locale()).ImportSourceTable() }
+
+// ImportSourceTable says "CSV or Excel file"
+// in the language of msgs.
+func (msgs Messages) ImportSourceTable() string {
+	return Catalog.Format(msgs.locale, "importSourceTable", nil)
+}
+
+// ChooseTableFile says "Choose a server list (CSV or Excel)"
+// in the language the app shows.
+func ChooseTableFile() string { return In(i18n.Locale()).ChooseTableFile() }
+
+// ChooseTableFile says "Choose a server list (CSV or Excel)"
+// in the language of msgs.
+func (msgs Messages) ChooseTableFile() string {
+	return Catalog.Format(msgs.locale, "chooseTableFile", nil)
+}
+
+// TableFileTypes says "CSV and Excel files"
+// in the language the app shows.
+func TableFileTypes() string { return In(i18n.Locale()).TableFileTypes() }
+
+// TableFileTypes says "CSV and Excel files"
+// in the language of msgs.
+func (msgs Messages) TableFileTypes() string {
+	return Catalog.Format(msgs.locale, "tableFileTypes", nil)
+}
+
+// TableNotFound says "Choose a CSV or Excel (.xlsx) file with a header row. Only a Host column is needed; Name, Port, User, Password, Priva…"
+// in the language the app shows.
+func TableNotFound() string { return In(i18n.Locale()).TableNotFound() }
+
+// TableNotFound says "Choose a CSV or Excel (.xlsx) file with a header row. Only a Host column is needed; Name, Port, User, Password, Priva…"
+// in the language of msgs.
+func (msgs Messages) TableNotFound() string {
+	return Catalog.Format(msgs.locale, "tableNotFound", nil)
+}
+
+// TableNote says "Passwords in the list go into the system keychain, not into the connections file."
+// in the language the app shows.
+func TableNote() string { return In(i18n.Locale()).TableNote() }
+
+// TableNote says "Passwords in the list go into the system keychain, not into the connections file."
+// in the language of msgs.
+func (msgs Messages) TableNote() string {
+	return Catalog.Format(msgs.locale, "tableNote", nil)
+}
+
+// ImportColPassword says "Password"
+// in the language the app shows.
+func ImportColPassword() string { return In(i18n.Locale()).ImportColPassword() }
+
+// ImportColPassword says "Password"
+// in the language of msgs.
+func (msgs Messages) ImportColPassword() string {
+	return Catalog.Format(msgs.locale, "importColPassword", nil)
+}
+
+// SaveTemplate says "Save template…"
+// in the language the app shows.
+func SaveTemplate() string { return In(i18n.Locale()).SaveTemplate() }
+
+// SaveTemplate says "Save template…"
+// in the language of msgs.
+func (msgs Messages) SaveTemplate() string {
+	return Catalog.Format(msgs.locale, "saveTemplate", nil)
+}
+
+// SaveTemplateTitle says "Save a server list template"
+// in the language the app shows.
+func SaveTemplateTitle() string { return In(i18n.Locale()).SaveTemplateTitle() }
+
+// SaveTemplateTitle says "Save a server list template"
+// in the language of msgs.
+func (msgs Messages) SaveTemplateTitle() string {
+	return Catalog.Format(msgs.locale, "saveTemplateTitle", nil)
+}
+
+// CsvFiles says "CSV files"
+// in the language the app shows.
+func CsvFiles() string { return In(i18n.Locale()).CsvFiles() }
+
+// CsvFiles says "CSV files"
+// in the language of msgs.
+func (msgs Messages) CsvFiles() string {
+	return Catalog.Format(msgs.locale, "csvFiles", nil)
+}
+
+// TemplateSaved says "Saved {path}"
+// in the language the app shows.
+//
+// The server list template was saved to path.
+func TemplateSaved(path string) string { return In(i18n.Locale()).TemplateSaved(path) }
+
+// TemplateSaved says "Saved {path}"
+// in the language of msgs.
+//
+// The server list template was saved to path.
+func (msgs Messages) TemplateSaved(path string) string {
+	return Catalog.Format(msgs.locale, "templateSaved", map[string]any{"path": path})
+}
+
+// TemplateSaveFailed says "Could not save the template: {error}"
+// in the language the app shows.
+func TemplateSaveFailed(error string) string { return In(i18n.Locale()).TemplateSaveFailed(error) }
+
+// TemplateSaveFailed says "Could not save the template: {error}"
+// in the language of msgs.
+func (msgs Messages) TemplateSaveFailed(error string) string {
+	return Catalog.Format(msgs.locale, "templateSaveFailed", map[string]any{"error": error})
+}
+
+// TableColName says "Name"
+// in the language the app shows.
+//
+// A header of the server list template; must be one the import reads
+// (importer.ColumnOf).
+func TableColName() string { return In(i18n.Locale()).TableColName() }
+
+// TableColName says "Name"
+// in the language of msgs.
+//
+// A header of the server list template; must be one the import reads
+// (importer.ColumnOf).
+func (msgs Messages) TableColName() string {
+	return Catalog.Format(msgs.locale, "tableColName", nil)
+}
+
+// TableColHost says "Host"
+// in the language the app shows.
+func TableColHost() string { return In(i18n.Locale()).TableColHost() }
+
+// TableColHost says "Host"
+// in the language of msgs.
+func (msgs Messages) TableColHost() string {
+	return Catalog.Format(msgs.locale, "tableColHost", nil)
+}
+
+// TableColPort says "Port"
+// in the language the app shows.
+func TableColPort() string { return In(i18n.Locale()).TableColPort() }
+
+// TableColPort says "Port"
+// in the language of msgs.
+func (msgs Messages) TableColPort() string {
+	return Catalog.Format(msgs.locale, "tableColPort", nil)
+}
+
+// TableColUser says "User"
+// in the language the app shows.
+func TableColUser() string { return In(i18n.Locale()).TableColUser() }
+
+// TableColUser says "User"
+// in the language of msgs.
+func (msgs Messages) TableColUser() string {
+	return Catalog.Format(msgs.locale, "tableColUser", nil)
+}
+
+// TableColPassword says "Password"
+// in the language the app shows.
+func TableColPassword() string { return In(i18n.Locale()).TableColPassword() }
+
+// TableColPassword says "Password"
+// in the language of msgs.
+func (msgs Messages) TableColPassword() string {
+	return Catalog.Format(msgs.locale, "tableColPassword", nil)
+}
+
+// TableColKey says "Private key"
+// in the language the app shows.
+func TableColKey() string { return In(i18n.Locale()).TableColKey() }
+
+// TableColKey says "Private key"
+// in the language of msgs.
+func (msgs Messages) TableColKey() string {
+	return Catalog.Format(msgs.locale, "tableColKey", nil)
+}
+
+// TableColFolder says "Folder"
+// in the language the app shows.
+func TableColFolder() string { return In(i18n.Locale()).TableColFolder() }
+
+// TableColFolder says "Folder"
+// in the language of msgs.
+func (msgs Messages) TableColFolder() string {
+	return Catalog.Format(msgs.locale, "tableColFolder", nil)
+}
+
+// TableColNotes says "Notes"
+// in the language the app shows.
+func TableColNotes() string { return In(i18n.Locale()).TableColNotes() }
+
+// TableColNotes says "Notes"
+// in the language of msgs.
+func (msgs Messages) TableColNotes() string {
+	return Catalog.Format(msgs.locale, "tableColNotes", nil)
+}
+
+// TableExampleName says "Example server"
+// in the language the app shows.
+func TableExampleName() string { return In(i18n.Locale()).TableExampleName() }
+
+// TableExampleName says "Example server"
+// in the language of msgs.
+func (msgs Messages) TableExampleName() string {
+	return Catalog.Format(msgs.locale, "tableExampleName", nil)
+}
+
+// TableExampleFolder says "Examples/Web"
+// in the language the app shows.
+func TableExampleFolder() string { return In(i18n.Locale()).TableExampleFolder() }
+
+// TableExampleFolder says "Examples/Web"
+// in the language of msgs.
+func (msgs Messages) TableExampleFolder() string {
+	return Catalog.Format(msgs.locale, "tableExampleFolder", nil)
+}
+
+// TableExampleNotes says "Replace this row with your servers"
+// in the language the app shows.
+func TableExampleNotes() string { return In(i18n.Locale()).TableExampleNotes() }
+
+// TableExampleNotes says "Replace this row with your servers"
+// in the language of msgs.
+func (msgs Messages) TableExampleNotes() string {
+	return Catalog.Format(msgs.locale, "tableExampleNotes", nil)
+}
+
+// TableNoHostColumn says "This list has no Host column. Its headers are: {headers}. Name the column of addresses Host, IP or Address (or …"
+// in the language the app shows.
+func TableNoHostColumn(headers string) string { return In(i18n.Locale()).TableNoHostColumn(headers) }
+
+// TableNoHostColumn says "This list has no Host column. Its headers are: {headers}. Name the column of addresses Host, IP or Address (or …"
+// in the language of msgs.
+func (msgs Messages) TableNoHostColumn(headers string) string {
+	return Catalog.Format(msgs.locale, "tableNoHostColumn", map[string]any{"headers": headers})
+}
+
+// TableWorkbook says "This file can't be read. In Excel, save it as an Excel workbook (.xlsx) without a password, or as CSV UTF-8, and choo…"
+// in the language the app shows.
+func TableWorkbook() string { return In(i18n.Locale()).TableWorkbook() }
+
+// TableWorkbook says "This file can't be read. In Excel, save it as an Excel workbook (.xlsx) without a password, or as CSV UTF-8, and choo…"
+// in the language of msgs.
+func (msgs Messages) TableWorkbook() string {
+	return Catalog.Format(msgs.locale, "tableWorkbook", nil)
+}
+
+// TableTooLarge says "The file is too large for a server list (at most 10 MB)."
+// in the language the app shows.
+func TableTooLarge() string { return In(i18n.Locale()).TableTooLarge() }
+
+// TableTooLarge says "The file is too large for a server list (at most 10 MB)."
+// in the language of msgs.
+func (msgs Messages) TableTooLarge() string {
+	return Catalog.Format(msgs.locale, "tableTooLarge", nil)
+}
+
+// ProblemBadPort says "the port is not from 1 to 65535"
+// in the language the app shows.
+func ProblemBadPort() string { return In(i18n.Locale()).ProblemBadPort() }
+
+// ProblemBadPort says "the port is not from 1 to 65535"
+// in the language of msgs.
+func (msgs Messages) ProblemBadPort() string {
+	return Catalog.Format(msgs.locale, "problemBadPort", nil)
+}
+
+// ProblemTooManyRows says "this row and those below not read: a list has at most 10,000"
+// in the language the app shows.
+func ProblemTooManyRows() string { return In(i18n.Locale()).ProblemTooManyRows() }
+
+// ProblemTooManyRows says "this row and those below not read: a list has at most 10,000"
+// in the language of msgs.
+func (msgs Messages) ProblemTooManyRows() string {
+	return Catalog.Format(msgs.locale, "problemTooManyRows", nil)
+}
+
 // DownloadsButton says "Downloads"
 // in the language the app shows.
 func DownloadsButton() string { return In(i18n.Locale()).DownloadsButton() }

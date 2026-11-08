@@ -69,7 +69,7 @@ macOS 上按 <kbd>Cmd</kbd>+<kbd>O</kbd>，其他系统按 <kbd>Ctrl</kbd>+<kbd>
   </tr>
 </table>
 
-每个新标签页都是快速连接：先列最近连接过的主机，再列其他主机，新加的在上面，可以搜索。从 FinalShell 搬过来的话，连接管理器里的“导入”会读出 FinalShell 的连接和文件夹。密码不导入，FinalShell 把它们加密存着；第一次连接时会问一次。
+每个新标签页都是快速连接：先列最近连接过的主机，再列其他主机，新加的在上面，可以搜索。从别的客户端搬过来的话，连接管理器里的“导入”能读出 FinalShell、Xshell、SecureCRT、MobaXterm 的连接和文件夹，`~/.ssh/config` 里的主机，或者 CSV、Excel 文件里的服务器列表。别的客户端加密存着的密码不导入，第一次连接时会问一次；服务器列表里的密码存进系统的密钥库。
 
 <table>
   <tr>

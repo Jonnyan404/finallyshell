@@ -36,6 +36,7 @@ type fakePlatform struct {
 	fakeFullScreen
 	fakeImagePicker
 	fakeFolderPicker
+	fakeSaver
 	fakeDownloads
 	fakeVSIXPicker
 	fakeAppearance

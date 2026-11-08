@@ -65,6 +65,7 @@ var readers = []*Reader{
 	secureCRTReader,
 	mobaXtermReader,
 	sshConfigReader,
+	tableReader,
 }
 
 // Reader is what the import window knows of a source.

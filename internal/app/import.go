@@ -2,6 +2,9 @@ package app
 
 import (
 	"errors"
+	"net"
+	"os"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strconv"
@@ -29,7 +32,10 @@ import (
 // many were imported, skipped and failed. Passwords of other clients are
 // not imported (see the importer package): the first connection asks for
 // them, as for any host. Those of a list that has them go in the system's
-// credential store, as a remembered password does.
+// credential store, as a remembered password does; the table then has a
+// Password column saying which rows have one, without showing it. A
+// source the user writes (a server list) has "Save template…", which
+// writes a file to fill in (importText.template).
 
 // WindowImport is the import window.
 const WindowImport WindowKind = "import"
@@ -55,6 +61,12 @@ type importState struct {
 	list     ui.ListState
 	row      int
 	reads    int // the readings started, so that an older one's result is dropped
+
+	// The source's template (importText.template): saving it, and where
+	// it was saved, or why not.
+	saving  bool
+	saved   string
+	saveErr error
 }
 
 // importRow is a connection the window lists.
@@ -200,8 +212,10 @@ func (st *importState) problemCounts() (failed, skipped int) {
 	return failed, skipped
 }
 
-func importColumns() []ui.TableColumn {
-	return []ui.TableColumn{
+// importColumns are the table's columns: with one of passwords for a
+// source that has them, which shows which rows do.
+func importColumns(passwords bool) []ui.TableColumn {
+	cols := []ui.TableColumn{
 		{ID: "check", Width: 34, Fixed: true},
 		{ID: "name", Title: locales.HostColName(), Width: 190, MinWidth: 100},
 		{ID: "host", Title: locales.HostColHost(), Width: 180, MinWidth: 80},
@@ -209,6 +223,10 @@ func importColumns() []ui.TableColumn {
 		{ID: "folder", Title: locales.ImportColFolder(), Width: 150, MinWidth: 60},
 		{ID: "status", Title: locales.ImportColStatus(), MinWidth: 80},
 	}
+	if passwords {
+		cols = slices.Insert(cols, 4, ui.TableColumn{ID: "password", Title: locales.ImportColPassword(), Width: 80, MinWidth: 50})
+	}
+	return cols
 }
 
 // importView is the import window.
@@ -263,6 +281,9 @@ func (a *App) importView(c *ui.Context) {
 					st.checkAll(statuses, false)
 				}
 				widgets.Muted(c, locales.ImportChosen(chosen, len(st.rows))).SingleLine().MinWidth(0)
+			}
+			if st.source.template != nil {
+				a.importTemplateButton(c, st)
 			}
 			ui.Spacer(c)
 			if ui.Button(c, locales.Cancel()).Clicked() {
@@ -338,6 +359,11 @@ func (st *importState) chooseLabel() string {
 
 // importError says why reading the file or folder failed.
 func (a *App) importError(st *importState) string {
+	if st.source.errorText != nil {
+		if s := st.source.errorText(st.err); s != "" {
+			return s
+		}
+	}
 	if errors.Is(st.err, importer.ErrNoConnections) {
 		return locales.ImportNoConnections(st.path)
 	}
@@ -354,7 +380,8 @@ func (st *importState) checkAll(statuses []importStatus, on bool) {
 func (a *App) importTable(c *ui.Context, st *importState, statuses []importStatus) {
 	st.list.Selected = &st.row
 	st.list.Label = func(row int) string { return st.rows[row].e.Host.Title() }
-	table := ui.Table(c, &st.list, importColumns(), len(st.rows), func(row, col int) {
+	cols := importColumns(slices.ContainsFunc(st.rows, func(r importRow) bool { return r.e.Password != "" }))
+	table := ui.Table(c, &st.list, cols, len(st.rows), func(row, col int) {
 		r, s := &st.rows[row], statuses[row]
 		h := r.e.Host
 		color := theme.Text
@@ -365,28 +392,32 @@ func (a *App) importTable(c *ui.Context, st *importState, statuses []importStatu
 			color = theme.AccentText
 		}
 		text := func(v string) ui.Element { return ui.Text(c, v).SingleLine().TextColor(color).MinWidth(0) }
-		switch col {
-		case 0:
+		switch cols[col].ID {
+		case "check":
 			checked := r.checked && !s.skipped()
 			if ui.Checkbox(c, &checked, "").Label(h.Title()).Disabled(s.skipped()).Changed() {
 				r.checked = checked
 			}
-		case 1:
+		case "name":
 			ui.Row(c).Gap(6).AlignItems(ui.Center).MinWidth(0).Children(func() {
 				ui.Icon(c, icons.Get("server")).FontSize(14).TextColor(color.Alpha(0.75))
 				text(h.Title())
 			})
-		case 2:
+		case "host":
 			addr := h.Addr
 			if h.PortOr22() != 22 {
-				addr += ":" + strconv.Itoa(h.PortOr22())
+				addr = net.JoinHostPort(addr, strconv.Itoa(h.PortOr22())) // [2001:db8::1]:2200
 			}
 			text(addr)
-		case 3:
+		case "user":
 			text(h.User)
-		case 4:
+		case "password": // never the password itself
+			if r.e.Password != "" {
+				text("••••")
+			}
+		case "folder":
 			text(r.e.FolderLabel())
-		case 5:
+		case "status":
 			var notes []string
 			switch {
 			case s.present != nil:
@@ -456,6 +487,46 @@ func (a *App) importProblems(c *ui.Context, st *importState) {
 			})
 		})
 	})
+}
+
+// importTemplateButton is "Save template…", for a source with a template,
+// and where it was saved, or why not.
+func (a *App) importTemplateButton(c *ui.Context, st *importState) {
+	if ui.Button(c, locales.SaveTemplate()).Disabled(st.saving).Clicked() {
+		a.saveImportTemplate(st)
+	}
+	switch {
+	case st.saveErr != nil:
+		ui.Text(c, locales.TemplateSaveFailed(st.saveErr.Error())).TextColor(theme.Danger).FontSize(12).SingleLine().MinWidth(0).Tooltip(st.saveErr.Error())
+	case st.saved != "":
+		widgets.Muted(c, locales.TemplateSaved(tildePath(st.saved, a.home(), runtime.GOOS))).FontSize(12).SingleLine().MinWidth(0).Tooltip(st.saved)
+	}
+}
+
+// saveImportTemplate asks where to save the template of st's source, in
+// the downloads folder to begin with, and writes it there, off the UI
+// thread. The window says where it went.
+func (a *App) saveImportTemplate(st *importState) {
+	tmpl, kind := st.source.template(), st.source.Kind
+	st.saving, st.saved, st.saveErr = true, "", nil
+	title, start := locales.SaveTemplateTitle(), filepath.Join(a.plat.DownloadsDir(), tmpl.name)
+	go func() {
+		path, err := a.plat.SaveFile(WindowImport, title, start, tmpl.typeName, []string{strings.TrimPrefix(filepath.Ext(tmpl.name), ".")})
+		if path != "" && err == nil {
+			err = os.WriteFile(path, tmpl.data, 0o644)
+		}
+		a.post(func() {
+			if a.imp != st || st.source.Kind != kind {
+				return
+			}
+			st.saving = false
+			if err != nil {
+				st.saveErr = err
+			} else {
+				st.saved = path
+			}
+		})
+	}()
 }
 
 // importChosen imports the rows chosen, closes the window and shows the

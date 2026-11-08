@@ -1,0 +1,9 @@
+﻿Name,Host,Port,User Name,Password,Private Key,Group,Description,Owner
+web-1,192.0.2.10,22,root,sample-password-1,,Production/Web,Front end,ann
+web-2,192.0.2.11:2222,,deploy,,~/.ssh/id_ed25519,Production\Web,,ann
+db-1,db.example.com,5432,postgres,"sample,password-2",,Production / Databases,"Primary database, ""main""",bob
+,,,,,,,,
+bastion,ops@bastion.example.com,,,,,,,
+no-host,,22,root,,,Production,,
+bad-port,192.0.2.12,70000,root,,,,,
+lab,[2001:db8::1]:2200,,pi,,,,,

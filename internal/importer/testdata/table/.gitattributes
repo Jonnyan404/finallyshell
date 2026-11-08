@@ -1,0 +1,3 @@
+# The samples are byte for byte as Excel and others save them: CRLF,
+# GBK, UTF-16. Git must not change their line ends.
+* -text

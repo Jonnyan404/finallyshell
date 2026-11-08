@@ -69,7 +69,7 @@ Each host can reach the server directly, through a SOCKS5 or HTTP proxy, or thro
   </tr>
 </table>
 
-Every new tab opens on quick connect: the hosts you connected to last, then the others, newest first, with a search box. Moving from FinalShell? "Import" in the connection manager reads FinalShell's connections and folders. Passwords aren't imported, since FinalShell keeps them encrypted; you're asked for each one the first time you connect.
+Every new tab opens on quick connect: the hosts you connected to last, then the others, newest first, with a search box. Moving from another client? "Import" in the connection manager reads the connections and folders of FinalShell, Xshell, SecureCRT and MobaXterm, the hosts in your `~/.ssh/config`, or a server list in a CSV or Excel file. Passwords the other clients keep encrypted aren't imported; you're asked for each one the first time you connect. A server list's passwords go into the system keychain.
 
 <table>
   <tr>

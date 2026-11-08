@@ -49,6 +49,11 @@ type Platform interface {
 	// files of which typeName names, over the window of parent as
 	// OpenFile does, hidden files shown: "" when canceled. It blocks too.
 	OpenFileOfType(parent WindowKind, title, typeName string, extensions []string) (string, error)
+	// SaveFile asks where to save a file, as a template to fill in,
+	// starting at path (its folder and name), with one of extensions,
+	// files of which typeName names, over the window of parent as
+	// OpenFile does: "" when canceled. It blocks too.
+	SaveFile(parent WindowKind, title, path, typeName string, extensions []string) (string, error)
 	// DownloadsDir is where downloads go unless the user chooses.
 	DownloadsDir() string
 	// ShowInFolder shows a file in the system's file manager.

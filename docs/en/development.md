@@ -221,7 +221,7 @@ tools/release/       release tools: works out the next version, writes the relea
 tools/screenshots/   regenerates the README screenshots in docs/screenshots/ from the internal/app tests
 internal/
   config/            reading and writing hosts and folders (hosts.json) and settings, the background image copy, the config directory; proxy.go is the proxy settings and the jump host chain (finding loops); tunnels.go is the tunnel settings; keys.go is what Backspace and Delete send
-  importer/          reads other clients' connections: importer.go is the list of sources (readers), the entries and problems they read, the text decoder (UTF-8, UTF-16, GB18030), finding duplicates and importing by folder; finalshell.go finds FinalShell's folder and reads the connections and folders in conn; xshell.go finds Xshell's Sessions folder and reads its .xsh files and .xts exports; sshconfig.go reads OpenSSH's ~/.ssh/config (Host blocks and patterns, Include, ProxyJump); testdata has made-up samples
+  importer/          reads other clients' connections: importer.go is the list of sources (readers), the entries and problems they read, the text decoder (UTF-8, UTF-16, GB18030), finding duplicates and importing by folder; finalshell.go finds FinalShell's folder and reads the connections and folders in conn; xshell.go finds Xshell's Sessions folder and reads its .xsh files and .xts exports; securecrt.go finds SecureCRT's config folder and reads the .ini files of its Sessions folder; mobaxterm.go finds MobaXterm.ini and reads its bookmark sections, and .mxtsessions and .moba exports; sshconfig.go reads OpenSSH's ~/.ssh/config (Host blocks and patterns, Include, ProxyJump); table.go reads a server list in a CSV file, or the first sheet of an .xlsx with xlsx.go, a reader of its own (archive/zip and encoding/xml, with limits against zip bombs); testdata has made-up samples
   sshx/              SSH connection, authentication, known_hosts, the Conn the terminal uses; proxy.go connects through SOCKS5, HTTP CONNECT and jump hosts; forward.go is port forwarding (-L/-R/-D) and the SOCKS5 server
   termenc/           converting a terminal's connection between the server's encoding (GBK, Big5, ...) and the UTF-8 the terminal reads
   sshtest/           in-process SSH server for tests: password login, an empty shell, port forwarding; StartSFTP also serves SFTP (the local file system)
@@ -253,6 +253,7 @@ internal/
     manager.go       connection manager window: folder tree, search, dragging, delete and restore, a.deleteHostForever(h)
     import.go        the "Import connections" window: choosing the source, finding or choosing its file or folder, preview and checkboxes, showing the result in the connection manager, a list's passwords into the keychain
     import_sources.go the import window's texts of each source (importTexts), and of the reasons and notes the sources give
+    import_table.go  a server list's parts of the import window: the template "Save template…" writes in the app's language, the texts of the list's errors
     dialogs.go       password, host key and replace confirmations
     options.go       options window: the list of pages and the General page
     options_appearance.go the Appearance row of the General page: light, dark or the system's
@@ -402,8 +403,12 @@ To add one:
    a file with extensions), what to say when nothing is found, and the
    note above the list (`locales.ImportPasswordsNote(name)` for a client
    that encrypts passwords). A new `Reason` or `Note` gets its text in
-   `importProblemText` or `importNoteText` there. The strings go in both
-   locales (see [Adding a UI string](#adding-a-ui-string)).
+   `importProblemText` or `importNoteText` there. Optionally, `errorText`
+   says the source's own errors in words of the app (else the window
+   shows "Could not read it" and the error), and `template` is a file for
+   "Save template…" to write, for a source the user writes, as the server
+   list's (`import_table.go`). The strings go in both locales (see
+   [Adding a UI string](#adding-a-ui-string)).
 
 `TestImportSourcesListed` fails for a source without texts. Nothing else
 in `import.go` changes for a source.

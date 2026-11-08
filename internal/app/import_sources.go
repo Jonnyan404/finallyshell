@@ -28,6 +28,19 @@ type importText struct {
 	// note is said above the list: what is not imported, as passwords.
 	// nil for nothing.
 	note func() string
+	// errorText says why reading failed, for errors of the source's own:
+	// "" for the others, which the window says itself. nil for none.
+	errorText func(err error) string
+	// template is the file "Save template…" writes, for a source the
+	// user writes: nil for none.
+	template func() importTemplate
+}
+
+// importTemplate is a file to fill in, as a source's example.
+type importTemplate struct {
+	name     string // the file's, as "servers.csv"
+	typeName string // the name of files of its extension, in the chooser
+	data     []byte
 }
 
 // importTexts are the texts of each source, by kind.
@@ -62,6 +75,15 @@ var importTexts = map[importer.Kind]importText{
 		choose:   locales.ChooseSSHConfigFile,
 		notFound: func() string { return locales.ImportSSHConfigNotFound(sshConfigPath(runtime.GOOS)) },
 		note:     locales.ImportSSHConfigNote,
+	},
+	importer.Table: {
+		name:      locales.ImportSourceTable,
+		choose:    locales.ChooseTableFile,
+		fileTypes: locales.TableFileTypes,
+		notFound:  locales.TableNotFound,
+		note:      locales.TableNote,
+		errorText: tableErrorText,
+		template:  tableTemplate,
 	},
 }
 
@@ -119,6 +141,10 @@ func importProblemText(p importer.Problem, source string) string {
 		return locales.ProblemSSHLine()
 	case importer.SSHIncludeLimit:
 		return locales.ProblemSSHIncludeLimit()
+	case importer.BadPort:
+		return locales.ProblemBadPort()
+	case importer.TooManyRows:
+		return locales.ProblemTooManyRows()
 	}
 	return string(p.Reason)
 }
