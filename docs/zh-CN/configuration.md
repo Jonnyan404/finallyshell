@@ -11,6 +11,8 @@ Finallyshell 把主机和设置存在普通的 JSON 文件里。密码从不写�
   - [文件夹、已删除的主机和其他字段](#文件夹已删除的主机和其他字段)
   - [安全](#安全)
 - [settings.json](#settingsjson)
+- [updater.json](#updaterjson)
+- [mygo.json 里的 updates](#mygojson-里的-updates)
 - [密码存在哪里](#密码存在哪里)
 
 ## 配置目录
@@ -140,6 +142,33 @@ Finallyshell 把主机和设置存在普通的 JSON 文件里。密码从不写�
 | `monitorPercent`、`terminalPercent` | 服务器监控占左边栏的比例、终端占主区域的比例，单位是百分比。 | 程序的默认值。 |
 
 每个选项的详细说明在 [features.md](features.md)：见[常规](features.md#常规)、[传输](features.md#传输)、[终端](features.md#terminal-defaults)、[终端 › 鼠标](features.md#终端--鼠标)、[终端 › 快捷键](features.md#终端--快捷键)、[外观](features.md#外观字体配色背景图片)、[文件图标主题](features.md#文件图标主题)、[连接管理器](features.md#连接管理器)和[布局和分隔条](features.md#布局和分隔条)。
+
+## updater.json
+
+更新窗口的选择（见[更新](features.md#更新)）由 MyGo 的 updater 插件保存在 `updater.json`，它在应用的用户数据文件夹，不在上面的配置目录：macOS 上是 `~/Library/Application Support/Finallyshell`（macOS 默认的文件系统不分大小写，所以和配置目录是同一个），Windows 上是 `%APPDATA%\Finallyshell`，Linux 上是 `$XDG_CONFIG_HOME/Finallyshell` 或 `~/.config/Finallyshell`。`FINALLYSHELL_DIR` 不影响它。
+
+| 键 | 含义 | 默认（没有这个键时） |
+|---|---|---|
+| `automaticChecks` | `false` 时关掉后台检查（“自动检查更新”）。 | 开。 |
+| `automaticDownloads` | `true` 时后台检查到的更新不问直接安装，下次启动时运行。 | 先问。 |
+| `skippedVersion` | 用户跳过的版本，后台检查不再提示它。 | 没有。 |
+| `lastCheck` | 上次检查成功的时间。 | 从没检查过。 |
+
+文件损坏时当作没有这个文件。
+
+## mygo.json 里的 updates
+
+`mygo.json` 里的 `updates` 会编译进应用：从哪里读取更新，以及更新必须用哪个密钥签名。
+
+```json
+"updates": {
+  "publicKey": "fwcqse2POLiSdWytl0BHeURrztxcDObwmos+4IlTqHQ=",
+  "github": "TooonyChen/finallyshell"
+}
+```
+
+- `publicKey` 是给更新签名的密钥的公钥。已安装的副本只接受用对应私钥签名的更新，私钥是仓库的 secret `MYGO_UPDATER_PRIVATE_KEY`，从不放进仓库（见[给更新签名](development.md#给更新签名)）。
+- `github` 是仓库，应用从它最新的发布读取更新清单。
 
 ## 密码存在哪里
 

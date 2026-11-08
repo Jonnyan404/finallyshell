@@ -12,6 +12,7 @@ pull requests) are in [CONTRIBUTING.md](../../CONTRIBUTING.md) and
 - [Checks before a commit](#checks-before-a-commit)
 - [Screenshots](#screenshots)
 - [Releasing](#releasing)
+- [Signing updates](#signing-updates)
 - [Code structure](#code-structure)
 - [Child windows](#child-windows)
 - [Adding an options page](#adding-an-options-page)
@@ -127,12 +128,72 @@ git push origin origin/main:production
    changed. `LICENSE` and the third-party licenses
    (`go run ./tools/release licenses`) are put in `resources/` and packaged
    with the app.
-4. Tags `v<version>` and publishes a GitHub Release with the installers,
-   `SHA256SUMS`, `LICENSE.txt` and `THIRD_PARTY_LICENSES.txt`. The release
-   notes are grouped by commit type (`go run ./tools/release notes`).
+
+   The build has the secret key `MYGO_UPDATER_PRIVATE_KEY` (see
+   [Signing updates](#signing-updates)), so `mygo build` also writes each
+   platform's update: the app as an archive
+   (`finallyshell-<version>-<platform>.tar.gz`), deltas from the last
+   three releases that have updates (`…-<from>-to-<version>-….delta`) and
+   the manifest `update-<platform>.json`, which names them with their
+   signatures. The job fails when the secret is missing, when there is no
+   manifest, or when the manifest is not this version in this release,
+   and otherwise copies the manifest and the files it names with the
+   installers.
+4. Checks that the manifests of all three platforms are there, then tags
+   `v<version>` and publishes a GitHub Release with the installers, the
+   updates, `SHA256SUMS`, `LICENSE.txt` and `THIRD_PARTY_LICENSES.txt`.
+   The release notes are grouped by commit type
+   (`go run ./tools/release notes`). The release is published, not a
+   draft, as installed apps read the manifests of the latest release;
+   `gh release create` keeps it a draft while it uploads the files, so
+   apps never see a manifest whose archive is not there yet.
+
+There is no `CHANGELOG.md`, so the manifests carry no release notes and
+the update window shows none.
 
 `production` should only ever be fast-forwarded from main; protect it in
 the repository settings (no force pushes).
+
+## Signing updates
+
+Installed apps accept only updates signed with the project's Ed25519 key
+(MyGo's [auto-updates](https://github.com/egoist/mygo/blob/main/docs/updates.md)).
+The owner made it with `mygo keygen` on 2026-11-08:
+
+- The secret key is the repository secret `MYGO_UPDATER_PRIVATE_KEY`, and
+  the owner keeps a copy. It is never committed, and never written to
+  `updates.privateKey`. Losing it strands every installed copy at its
+  version; anyone who has it can ship code to users.
+- The public key is `updates.publicKey` in `mygo.json`; `TestUpdatesConfig`
+  in the main package checks it is still there.
+- Builds without the secret, such as `go tool mygo build` on your
+  machine, still build the apps and skip the update files. Pull request CI
+  does not build.
+
+The app's side is `updates.go`: it uses the updater plugin's native UI
+window (`native.New`) without a `Language`, so the window speaks
+`App.Locale`, which follows the Language option, and gives
+`internal/app` the state of the Options row through the `Platform`
+methods `Updates`, `CheckForUpdates` and `SetAutomaticUpdateChecks`.
+`updater.OnChange` runs on the UI thread and only redraws the windows.
+
+To try an update without a release, build two versions with a throwaway
+key and serve them from your machine:
+
+1. `go tool mygo keygen -o /tmp/keys`, and in a copy of `mygo.json` set
+   `updates` to that public key and `"url": "https://localhost:8443/u"`.
+2. With `MYGO_UPDATER_PRIVATE_KEY="$(cat /tmp/keys/mygo-update.key)"`,
+   build version 0.2.0 (`go tool mygo build -o dist-old`), serve its
+   archive and manifest over HTTPS from `u/` with a self-signed
+   certificate for `localhost`, then build 0.3.0, which makes a delta from
+   the served 0.2.0. Serve its archive, delta and manifest.
+3. Extract the 0.2.0 archive to `~/.local/finallyshell.app` (under a
+   separate `HOME`) and start it with `SSL_CERT_FILE` naming a bundle that
+   includes the certificate, and `NO_PROXY=localhost`. The update window
+   shows after 10 seconds. `{"automaticDownloads": true}` in
+   `updater.json` makes it install without asking.
+
+Delete the throwaway key afterwards.
 
 ## Code structure
 
@@ -143,6 +204,7 @@ can only be used by this project.
 ```
 main.go              starts MyGo and opens the main window; hands system features (child windows, dialogs, download folder, language) to app
 tray.go              tray icon, the confirmation message box, quitting
+updates.go           the update window (MyGo's updater plugin, native UI), the Updates row's status, the macOS app menu with "Check for Updates…"
 keychain.go          the system credential store (mygo.Secrets): Platform's SecretGet/Set/Delete
 locales/             UI strings: en.json, zh-Hans.json; catalog_gen.go is generated by mygo, do not edit it by hand
 tools/release/       release tools: works out the next version, writes the release notes, collects third-party licenses (notices/ has the licenses of libraries packaged as binaries)
@@ -185,6 +247,7 @@ internal/
     options.go       options window: the list of pages and the General page
     options_appearance.go the Appearance row of the General page: light, dark or the system's
     palette.go       the app's light and dark themes, the colors besides the theme's for each, and useTheme, which every window calls to pick them by the frame's appearance
+    options_updates.go the Updates row of the General page: version, checking, why a copy cannot update
     keyseq.go        the Terminal page of the options (default encoding, Backspace and Delete), the choices the connection editor shares, and the key handlers that send them
     mouse.go         the Terminal › Mouse page, and how its settings become terminal options
     shortcuts.go     shortcuts: actions and their defaults per platform, keys that cannot be used, conflicts, dispatching window shortcuts, the terminal's Keybinds

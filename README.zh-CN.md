@@ -48,6 +48,8 @@ xattr -dr com.apple.quarantine /Applications/Finallyshell.app
 
 Linux 上托盘图标需要 `libayatana-appindicator3`，记住密码需要 Secret Service 密钥环（GNOME Keyring、KWallet、KeePassXC 等）。没有的话程序照样能用，只是密码只留在内存里。
 
+之后 Finallyshell 会自行更新；`.deb` 除外，装新的 `.deb` 就是更新。0.2.0 及更早的版本不能自行更新：手动安装一次新版本。
+
 ## 功能
 
 ### 连接
@@ -126,6 +128,7 @@ locale 不是 UTF-8 的服务器也能用：终端可以转换 GBK、GB18030、B
 - 所有快捷键都能改。shell 要用的键（比如 <kbd>Ctrl</kbd>+<kbd>C</kbd>、<kbd>Ctrl</kbd>+<kbd>R</kbd>）不让占用，并说明原因。
 - 关闭时可以最小化到托盘（macOS 是菜单栏），有会话连着时关闭前先确认。
 - 同时只运行一个：再打开一次会把已经运行的窗口提到前面。
+- 自行更新：每天检查一次，也可以手动检查，原地安装签过名的更新。
 - 拖动面板之间的分隔条调整大小，下次启动还是这个大小。
 
 每个功能的细节见 [docs/zh-CN/features.md](docs/zh-CN/features.md)，程序保存的文件见 [docs/zh-CN/configuration.md](docs/zh-CN/configuration.md)。

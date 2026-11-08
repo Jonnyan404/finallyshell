@@ -48,6 +48,8 @@ or open System Settings › Privacy & Security and click "Open Anyway". Windows 
 
 On Linux, the tray icon needs `libayatana-appindicator3`, and remembering passwords needs a Secret Service keyring (GNOME Keyring, KWallet, KeePassXC). Without them the app still works; it just keeps passwords in memory.
 
+After that, Finallyshell updates itself, except the `.deb`, which you update by installing the new one. Versions up to 0.2.0 can't: install a newer release by hand once.
+
 ## Features
 
 ### Connections
@@ -126,6 +128,7 @@ Servers whose locale isn't UTF-8 work too: the terminal converts GBK, GB18030, B
 - Every shortcut can be changed. Keys the shell needs, such as <kbd>Ctrl</kbd>+<kbd>C</kbd> or <kbd>Ctrl</kbd>+<kbd>R</kbd>, are refused with an explanation.
 - Minimize to the tray or menu bar, and confirm before closing while sessions are connected.
 - Only one copy runs at a time: opening it again brings the running window forward.
+- Updates itself: it checks once a day, or when you ask, and installs a signed update in place.
 - Drag the dividers between panels to resize them; the sizes are remembered.
 
 [docs/en/features.md](docs/en/features.md) describes every feature in detail, and [docs/en/configuration.md](docs/en/configuration.md) the files the app keeps.

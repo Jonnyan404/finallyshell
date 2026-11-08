@@ -43,6 +43,7 @@ supported. [configuration.md](configuration.md) covers the files on disk;
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [Layout and split dividers](#layout-and-split-dividers)
 - [Language](#language)
+- [Updates](#updates)
 
 ## Window layout
 
@@ -878,7 +879,7 @@ file icon theme page under [File icon themes](#file-icon-themes).
   new one is still selected.
 - Minimize to tray when closed (off by default): the main window's close
   button hides the window to a tray icon (the menu bar on macOS). The
-  icon's menu has "Show Finallyshell" and "Quit". On Windows, left-clicking
+  icon's menu has "Show Finallyshell", "Check for Updates…" and "Quit". On Windows, left-clicking
   the icon also shows the window; on macOS, so does clicking the Dock icon.
   When the system has no tray (Linux without
   `libayatana-appindicator3`), the option behaves as if it were off.
@@ -887,6 +888,9 @@ file icon theme page under [File icon themes](#file-icon-themes).
   menu, Cmd+Q on macOS) asks once first, with the system's message box.
   With the tray option also on, the close button hides the window without
   asking, and only "Quit" asks.
+- Updates: the version running, "Check for Updates…", "Check for updates
+  automatically" (on by default) and the newer version a check found, or
+  why this copy cannot update itself; see [Updates](#updates).
 
 See [Closing and quitting](development.md#closing-and-quitting) for the
 full behavior.
@@ -1094,3 +1098,64 @@ The UI is in English and Simplified Chinese. By default it follows the
 system language. Change it on the General page of the Options window
 (the gear button next to the "Sessions" title at the bottom left); the
 choice is saved.
+
+## Updates
+
+Finallyshell updates itself from the releases on GitHub, with MyGo's
+signed updates and its update window (the updater plugin, in native UI).
+
+- Checking: 10 seconds after launch, then once a day while the app runs,
+  it reads the update manifest of the latest release
+  (`update-<platform>.json`, one small file from
+  `github.com/TooonyChen/finallyshell/releases/latest/download/`, not the
+  GitHub API). "Check for updates automatically" in Options › General
+  turns this off; it is on by default.
+- When a newer version is out, a window offers **Install Update**,
+  **Remind Me Later** and **Skip This Version**, and a check box to
+  download and install updates without asking from then on. A skipped
+  version is not offered again by the background checks; the next one is.
+- Installing downloads the update with a progress bar: a small delta from
+  the version running when the release has one, else the whole app. It
+  checks the Ed25519 signature against the public key built into the app,
+  replaces the app, and offers to relaunch; otherwise the new version runs
+  at the next launch.
+- "Check for Updates…" checks at once and says when the app is up to date
+  or the check failed; it offers skipped versions too. It is in
+  Options › General, in the tray icon's menu, and on macOS in the app
+  menu (Finallyshell › Check for Updates…).
+- Options › General also shows the version running and, once a check
+  found one, "Version x.y.z is available".
+- The window speaks the language the app shows (the Language option), and
+  a window opened after the language changes takes the new one.
+
+Where a copy can update itself:
+
+| System | Install | Updates itself |
+|---|---|---|
+| macOS | The app in `/Applications` or `~/Applications` | Yes |
+| Windows | The installer's per-user install in `%LOCALAPPDATA%\Programs`; the portable zip where its folder is writable | Yes |
+| Linux | The `.tar.gz` installed with `install.sh` in `~/.local` | Yes |
+| Linux | The `.deb` in `/opt` | No: the package manager updates it |
+| Any | A development build (`go run`, `mygo dev`) | No |
+
+Where it cannot, Options › General says why and links to the
+[releases page](https://github.com/TooonyChen/finallyshell/releases)
+instead of offering to check, and "Check for Updates…" in the menus opens
+a window that says so.
+
+Notes:
+
+- Versions up to 0.2.0 have no updater: install the first version that
+  has one by hand, once. The ones after it update themselves.
+- The macOS app is signed ad hoc, so each build's signature differs. After
+  an update, macOS may ask again whether Finallyshell may use the
+  passwords it saved in the keychain, as it does after installing a new
+  version by hand. This is not yet checked on a real Mac.
+- The update window shows no release notes yet; they are on the
+  releases page.
+- Prereleases, notarization on macOS, Authenticode on Windows and an apt
+  repository for the `.deb` are not supported.
+
+The choices (automatic checks, installing without asking, the skipped
+version, the time of the last check) are kept in `updater.json`; see
+[configuration.md](configuration.md#updaterjson).

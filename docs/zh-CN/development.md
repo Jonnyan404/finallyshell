@@ -9,6 +9,7 @@
 - [提交前的检查](#提交前的检查)
 - [截图](#截图)
 - [发布](#发布)
+- [给更新签名](#给更新签名)
 - [代码结构](#代码结构)
 - [子窗口](#子窗口)
 - [选项窗口加一页](#选项窗口加一页)
@@ -89,9 +90,31 @@ git push origin origin/main:production
    还没有 tag 时用 `mygo.json` 里的版本（第一次发布是 0.2.0）。已经打过 tag 的提交不会再发布，所以重新运行是安全的。
 2. 跑和 PR 一样的检查（`.github/workflows/ci.yml`：gofmt、`go vet`、`go tool mygo vet`、`go test -race`）。
 3. 编译三个平台：macOS arm64 在 macOS runner 上（ad hoc 签名、dmg），Linux x86_64 和 Windows x86_64 在 Linux runner 上交叉编译（Windows 安装程序用 apt 装的 NSIS）。版本号只在 runner 里写进 `mygo.json`，main 上的不改。`LICENSE` 和第三方许可证（`go run ./tools/release licenses`）放进 `resources/`，随应用一起打包。
-4. 打 tag `v<版本>`，发布 GitHub Release，附上安装包、`SHA256SUMS`、`LICENSE.txt`、`THIRD_PARTY_LICENSES.txt`。说明按提交类型分组（`go run ./tools/release notes`）。
+
+   编译时有私钥 `MYGO_UPDATER_PRIVATE_KEY`（见[给更新签名](#给更新签名)），所以 `mygo build` 还会写出每个平台的更新：打成压缩包的应用（`finallyshell-<版本>-<平台>.tar.gz`）、从最近三个有更新的发布出发的增量更新（`…-<旧版本>-to-<版本>-….delta`），以及列出它们和签名的清单 `update-<平台>.json`。没有这个 secret、没有清单、或者清单不是这个版本、这个发布的，任务失败；否则把清单和它列出的文件跟安装包放在一起。
+4. 检查三个平台的清单都在，然后打 tag `v<版本>`，发布 GitHub Release，附上安装包、更新文件、`SHA256SUMS`、`LICENSE.txt`、`THIRD_PARTY_LICENSES.txt`。说明按提交类型分组（`go run ./tools/release notes`）。发布是正式发布，不是草稿，因为已安装的应用读取的是最新发布的清单；`gh release create` 上传文件期间让它保持草稿，所以应用不会看到压缩包还没上传的清单。
+
+仓库里没有 `CHANGELOG.md`，所以清单里没有更新说明，更新窗口也不显示说明。
 
 `production` 只应该从 main 快进，在仓库设置里给它加分支保护（禁止强推）。
+
+## 给更新签名
+
+已安装的应用只接受用项目的 Ed25519 密钥签名的更新（MyGo 的[自动更新](https://github.com/egoist/mygo/blob/main/docs/updates.md)）。这个密钥是所有者 2026-11-08 用 `mygo keygen` 生成的：
+
+- 私钥是仓库的 secret `MYGO_UPDATER_PRIVATE_KEY`，所有者另外保存一份。它从不提交，也不写进 `updates.privateKey`。丢了它，所有已安装的副本都停在当前版本；拿到它的人可以给用户推送代码。
+- 公钥是 `mygo.json` 里的 `updates.publicKey`；main 包的 `TestUpdatesConfig` 检查它还在。
+- 没有私钥的编译，比如在自己电脑上 `go tool mygo build`，照样编译应用，只是不写更新文件。PR 的 CI 不编译。
+
+应用这边是 `updates.go`：用 updater 插件的原生 UI 窗口（`native.New`），不设 `Language`，这样窗口用 `App.Locale`，它跟随“界面语言”选项；再通过 `Platform` 的 `Updates`、`CheckForUpdates`、`SetAutomaticUpdateChecks` 把选项那一行要的状态交给 `internal/app`。`updater.OnChange` 在 UI 线程上运行，只重画窗口。
+
+不发布也能试更新：用一次性的密钥编译两个版本，从本机提供下载：
+
+1. `go tool mygo keygen -o /tmp/keys`，在 `mygo.json` 的副本里把 `updates` 设成这个公钥和 `"url": "https://localhost:8443/u"`。
+2. 设 `MYGO_UPDATER_PRIVATE_KEY="$(cat /tmp/keys/mygo-update.key)"`，编译 0.2.0（`go tool mygo build -o dist-old`），用给 `localhost` 的自签名证书通过 HTTPS 在 `u/` 下提供它的压缩包和清单；再编译 0.3.0，它会生成从这个 0.2.0 出发的增量更新。提供它的压缩包、增量更新和清单。
+3. 把 0.2.0 的压缩包解压到 `~/.local/finallyshell.app`（用单独的 `HOME`），启动时让 `SSL_CERT_FILE` 指向包含这个证书的证书包，并设 `NO_PROXY=localhost`。10 秒后出现更新窗口。在 `updater.json` 里写 `{"automaticDownloads": true}` 就不问直接安装。
+
+试完删掉一次性的密钥。
 
 ## 代码结构
 
@@ -100,6 +123,7 @@ Go 里一个文件夹就是一个包（package），包之间不能循环引用�
 ```
 main.go              启动 MyGo、开主窗口，把系统功能（子窗口、对话框、下载目录、语言）交给 app
 tray.go              托盘图标、确认用的消息框、退出
+updates.go           更新窗口（MyGo 的 updater 插件，原生 UI）、“更新”那一行的状态、带“检查更新…”的 macOS 应用菜单
 keychain.go          系统凭据存储（mygo.Secrets）：Platform 的 SecretGet/Set/Delete
 locales/             界面文案：en.json、zh-Hans.json；catalog_gen.go 由 mygo 生成，不要手改
 tools/release/       发布用的工具：算下一个版本号、生成 release 说明、收集第三方许可证（notices/ 是以二进制打包的库的许可证）
@@ -142,6 +166,7 @@ internal/
     options.go       选项窗口：页面列表和“常规”页
     options_appearance.go “常规”页的“外观”：浅色、深色或跟随系统
     palette.go       应用的浅色和深色主题、主题之外的两套颜色，以及每个窗口用来按这一帧的外观选用它们的 useTheme
+    options_updates.go “常规”页的“更新”一行：版本、检查、副本为什么不能更新
     keyseq.go        选项的“终端”页（默认编码、退格键和删除键），连接编辑器共用的选项，以及发送它们的按键处理
     mouse.go         “终端 › 鼠标”页，以及这些设置怎样变成终端的选项
     shortcuts.go     快捷键：操作和各平台的默认键、哪些键不能用、冲突、窗口快捷键的分派、终端的 Keybinds

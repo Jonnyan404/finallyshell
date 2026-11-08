@@ -14,6 +14,8 @@ behind each setting.
   - [Folders, deleted hosts and other fields](#folders-deleted-hosts-and-other-fields)
   - [Safety](#safety)
 - [settings.json](#settingsjson)
+- [updater.json](#updaterjson)
+- [Updates in mygo.json](#updates-in-mygojson)
 - [Where passwords are stored](#where-passwords-are-stored)
 
 ## Config directory
@@ -178,6 +180,44 @@ Details of each option are in [features.md](features.md): see
 [File icon themes](features.md#file-icon-themes),
 [Connection manager](features.md#connection-manager) and
 [Layout and split dividers](features.md#layout-and-split-dividers).
+
+## updater.json
+
+The choices of the update window (see [Updates](features.md#updates)) are
+kept by MyGo's updater plugin in `updater.json`, in the app's user data
+folder rather than the config directory above: `~/Library/Application
+Support/Finallyshell` on macOS (on its default file system, which ignores
+case, the same folder as the config directory), `%APPDATA%\Finallyshell` on Windows,
+and `$XDG_CONFIG_HOME/Finallyshell` or `~/.config/Finallyshell` on Linux.
+`FINALLYSHELL_DIR` does not move it.
+
+| Key | Meaning | Default (when missing) |
+|---|---|---|
+| `automaticChecks` | `false` turns the checks in the background off ("Check for updates automatically"). | On. |
+| `automaticDownloads` | `true` installs the updates the background checks find without asking; they run at the next launch. | Ask. |
+| `skippedVersion` | The version the user skipped; the background checks do not offer it. | None. |
+| `lastCheck` | When the last check succeeded. | Never. |
+
+A damaged file is ignored, as if it were missing.
+
+## Updates in mygo.json
+
+`updates` in `mygo.json` is built into the app: where it reads updates and
+the key they must be signed with.
+
+```json
+"updates": {
+  "publicKey": "fwcqse2POLiSdWytl0BHeURrztxcDObwmos+4IlTqHQ=",
+  "github": "TooonyChen/finallyshell"
+}
+```
+
+- `publicKey` is the public half of the key that signs updates. Installed
+  copies accept only updates signed with its secret half, which is the
+  repository secret `MYGO_UPDATER_PRIVATE_KEY` and never in the
+  repository (see [Signing updates](development.md#signing-updates)).
+- `github` is the repository whose latest release the app reads the
+  update manifests from.
 
 ## Where passwords are stored
 
